@@ -3,6 +3,7 @@
 ;; My frequently used commands are listed here
 
 ;; enable evil-mode
+(setq evil-search-module 'evil-search)
 (evil-mode 1)
 
 ;; {{ replace undo-tree with undo-fu
@@ -342,25 +343,14 @@ If the character before and after CH is space or tab, CH is NOT slash"
       (setq isearch-forward t)
       ;; if imenu is available, try it
       (cond
-       ((and (derived-mode-p 'js2-mode)
-             (or (null (get-text-property (point) 'face))
-                 (font-belongs-to (point) '(rjsx-tag))))
+       ((bound-and-true-p tide-mode)
+        (tide-jump-to-definition))
+       ((bound-and-true-p js2-mode)
         (js2-jump-to-definition))
-       ((fboundp 'imenu--make-index-alist)
-        (condition-case nil
-            (setq ientry (imenu--make-index-alist))
-          (error nil))
-        (setq ientry (assoc string ientry))
-        (setq ipos (cdr ientry))
-        (when (and (markerp ipos)
-                   (eq (marker-buffer ipos) (current-buffer)))
-          (setq ipos (marker-position ipos)))
-        ;; imenu found a position, so go there and
-        ;; highlight the occurrence
-        (my-search-defun-from-pos search (if (numberp ipos) ipos (point-min))))
-       ;; otherwise just go to first occurrence in buffer
-       (t
-        (my-search-defun-from-pos search (point-min)))))))
+       (t (evil-goto-definition))
+       )
+      )))
+(define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
 
 ;; I learn this trick from ReneFroger, need latest expand-region
 ;; @see https://github.com/redguardtoo/evil-matchit/issues/38
@@ -498,6 +488,42 @@ If INCLUSIVE is t, the text object is inclusive."
 (define-key evil-inner-text-objects-map "i" #'my-evil-inner-single-or-double-quote)
 ;; }}
 
+(general-create-definer evil-begin-defun-def
+  :prefix "["
+  :states '(normal visual))
+
+(evil-begin-defun-def
+ "{" 'backward-up-list
+ )
+
+(general-create-definer evil-end-defun-def
+  :prefix "]"
+  :states '(normal visual))
+
+(evil-end-defun-def
+  "}" (lambda () (interactive) (let ()
+                                (backward-up-list)
+                                (evilmi-jump-items)))
+ )
+
+(general-create-definer evil-begin-defun-def
+  :prefix "["
+  :states '(normal visual))
+
+(evil-begin-defun-def
+ "{" 'backward-up-list
+ )
+
+(general-create-definer evil-end-defun-def
+  :prefix "]"
+  :states '(normal visual))
+
+(evil-end-defun-def
+  "}" (lambda () (interactive) (let ()
+                                (backward-up-list)
+                                (evilmi-jump-items)))
+ )
+
 ;; {{ use `,` as leader key
 (general-create-definer my-comma-leader-def
   :prefix ","
@@ -590,6 +616,7 @@ If INCLUSIVE is t, the text object is inclusive."
   "tm" 'my-git-timemachine
   ;; toggle overview,  @see http://emacs.wordpress.com/2007/01/16/quick-and-dirty-code-folding/
   "op" 'compile
+  "ntd" 'neotree-project-dir
   "c$" 'org-archive-subtree ; `C-c $'
   ;; org-do-demote/org-do-premote support selected region
   "c<" 'org-do-promote ; `C-c C-<'
@@ -771,6 +798,26 @@ If INCLUSIVE is t, the text object is inclusive."
   "jsl" 'js2r-forward-slurp
   "jba" 'js2r-forward-barf
   "jk" 'js2r-kill)
+
+(general-create-definer my-jsx-leader-def
+  :states '(insert emacs)
+  :keymaps 'rjsx-mode-map)
+(my-jsx-leader-def
+ "<" 'rjsx-electric-lt
+ ">" 'rjsx-electric-gt)
+
+(general-create-definer my-tide-leader-def
+  :prefix ","
+  :states '(normal visual)
+  :keymaps 'tide-mode-map)
+(my-tide-leader-def
+  "tj" 'tide-jsdoc-template
+  "tf" 'tide-fix
+  "trf" 'tide-rename-file
+  "trs" 'tide-rename-symbol
+  "ref" 'tide-references
+  )
+
 ;; }}
 
 (defun my-evil-delete-hack (orig-func &rest args)

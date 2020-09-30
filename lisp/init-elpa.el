@@ -29,6 +29,7 @@
     vimrc-mode
     rjsx-mode ; fixed the indent issue in jsx
     package-lint ; for melpa pull request only
+    flycheck
     auto-yasnippet
     typescript-mode ; the stable version lacks important feature (highlight function names)
     evil-exchange
@@ -107,6 +108,7 @@
     workgroups2
     zoutline
     company-c-headers
+    lsp-latex
     company-statistics)
   "Packages to install from melpa-unstable.")
 
@@ -275,6 +277,10 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'js-doc)
 (require-package 'js2-mode)
 (require-package 'rjsx-mode)
+(require-package 'tide)
+(require-package 'go-mode)
+(require-package 'flycheck)
+(require-package 'company-lsp)
 (require-package 'tagedit)
 (require-package 'git-link)
 (require-package 'cliphist)
@@ -331,6 +337,7 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'pdf-tools)
 (require-package 'pyim)
 (require-package 'pyim-wbdict) ; someone may use wubi IME, not me
+(require-package 'lsp-latex)
 
 ;; {{ Fixed expiring GNU ELPA keys
 ;; GNU ELPA GPG key will expire on Sep-2019. So we need install this package to

@@ -117,7 +117,7 @@
   (require-init 'init-elpa)
   (require-init 'init-exec-path t) ;; Set up $PATH
   ;; Any file use flyspell should be initialized after init-spelling.el
-  (require-init 'init-spelling t)
+  ;; (require-init 'init-spelling t)
   (require-init 'init-uniquify t)
   (require-init 'init-ibuffer t)
   (require-init 'init-ivy)
@@ -148,6 +148,8 @@
   ;; need statistics of keyfreq asap
   (require-init 'init-keyfreq t)
   (require-init 'init-httpd t)
+  (require-init 'init-go)
+  (require-init 'init-latex)
 
   ;; projectile costs 7% startup time
 

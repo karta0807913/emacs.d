@@ -77,6 +77,9 @@
 (autoload 'eacl-complete-tag "eacl" "")
 (autoload 'dropdown-list "dropdown-list" "")
 (autoload 'magit-commit-popup "magit" "")
+(autoload 'rjsx-mode "rjsx-mode" nil t)
+(autoload 'go-mode "go-mode" nil t)
+(autoload 'lsp-latex "lsp-latex")
 
 (provide 'init-autoload)
 ;;; init-autoload.el ends here

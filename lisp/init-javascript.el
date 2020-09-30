@@ -2,8 +2,8 @@
 (setq-default js2-use-font-lock-faces t
               js2-mode-must-byte-compile nil
               ;; {{ comment indention in modern frontend development
-              javascript-indent-level 2
-              js-indent-level 2
+              javascript-indent-level 4
+              js-indent-level 4
               css-indent-offset 2
               typescript-indent-level 2
               ;; }}
@@ -230,6 +230,7 @@ Merge RLT and EXTRA-RLT, items in RLT has *higher* priority."
 
 (defun my-js2-mode-setup()
   (unless (is-buffer-file-temp)
+    (tide-setup)
     (my-common-js-setup)
     ;; if use node.js we need nice output
     (js2-imenu-extras-mode)
@@ -287,9 +288,15 @@ INDENT-SIZE decide the indentation level.
 ;; Latest rjsx-mode does not have indentation issue
 ;; @see https://emacs.stackexchange.com/questions/33536/how-to-edit-jsx-react-files-in-emacs
 
-(defun typescript-mode-hook-setup ()
-  (setq imenu-create-index-function 'mo-js-imenu-make-index))
-(add-hook 'typescript-mode-hook 'typescript-mode-hook-setup)
+;; tide-mode setup
+(defun setup-tide-mode ()
+  (interactive)
+  (tide-setup)
+  (flycheck-mode 1)
+  (tide-hl-identifier-mode 1))
+
+(add-hook 'before-save-hook 'tide-format-before-save)
+(add-hook 'typescript-mode-hook #'setup-tide-mode)
 
 (setq-default js2-additional-externs
               '("$"

@@ -33,7 +33,7 @@
         company-dabbrev-ignore-case nil
         ;; press M-number to choose candidate
         company-show-numbers t
-        company-idle-delay 0.2
+        company-idle-delay 0
         company-clang-insert-arguments nil
         company-require-match nil
         company-ctags-ignore-case t ; I use company-ctags instead
