@@ -343,6 +343,8 @@ If the character before and after CH is space or tab, CH is NOT slash"
       (setq isearch-forward t)
       ;; if imenu is available, try it
       (cond
+       ((bound-and-true-p lsp-mode)
+        (lsp-find-definition))
        ((bound-and-true-p tide-mode)
         (tide-jump-to-definition))
        ((bound-and-true-p js2-mode)

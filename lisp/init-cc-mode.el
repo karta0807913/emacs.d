@@ -52,6 +52,20 @@
   ;; make a #define be left-aligned
   (setq c-electric-pound-behavior (quote (alignleft))))
 
+(defun clangd-lsp-write-default-settings ()
+  (when-let
+      (root (lsp-workspace-root))
+    (let ((config-path (concat (file-name-as-directory root) ".clang-format")))
+      (when (not (file-exists-p config-path))
+        (with-temp-buffer
+          (insert "BasedOnStyle: LLVM
+IndentWidth: 4
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty")
+          (write-file config-path t)))
+      ))
+  )
+
 ;; donot use c-mode-common-hook or cc-mode-hook because many major-modes use this hook
 (defun c-mode-common-hook-setup ()
   (unless (is-buffer-file-temp)
@@ -66,7 +80,12 @@
                                     (shell-command-to-string "global -p"))))
       ;; emacs 24.4+ will set up eldoc automatically.
       ;; so below code is NOT needed.
-      (eldoc-mode 1))))
+      (eldoc-mode 1)))
+  (setq lsp-clients-clangd-args '("--fallback-style=./.clang-config"))
+  (add-hook 'lsp-mode-hook 'clangd-lsp-write-default-settings)
+  (flycheck-mode 1)
+  (lsp))
+
 (add-hook 'c-mode-common-hook 'c-mode-common-hook-setup)
 
 (provide 'init-cc-mode)

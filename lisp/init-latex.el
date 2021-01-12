@@ -1,8 +1,10 @@
+
 (defun init-lsp-latex-mode ()
+  (add-hook 'lsp-mode-hook (lambda ()
+                             (setq tab-width 2)))
   (flycheck-mode +1)
   (flyspell-mode +1)
-  (lsp)
-  )
+  (lsp))
 
 (with-eval-after-load "tex-mode"
   (require 'lsp-latex)
