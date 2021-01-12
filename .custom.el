@@ -1,3 +1,4 @@
+(setq line-number-mode t)
 (setq scroll-step            1
       scroll-conservatively  10000)
 
