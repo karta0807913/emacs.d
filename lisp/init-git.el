@@ -2,7 +2,7 @@
 
 ;; ;; {{ Solution 1: disable all vc backends
 ;; @see http://stackoverflow.com/questions/5748814/how-does-one-disable-vc-git-in-emacs
-;; (setq vc-handled-backends ())
+;; (setq vc-handled-backends nil)
 ;; }}
 
 ;; {{ Solution 2: if NO network mounted drive involved
@@ -33,8 +33,12 @@
 ;; ;; }}
 
 ;; {{ git-gutter
-(local-require 'git-gutter)
 (with-eval-after-load 'git-gutter
+  (unless (fboundp 'global-display-line-numbers-mode)
+    ;; git-gutter's workaround for linum-mode bug.
+    ;; should not be used in `display-line-number-mode'
+    (git-gutter:linum-setup))
+
   (setq git-gutter:update-interval 2)
   ;; nobody use bzr
   ;; I could be forced to use subversion or hg which has higher priority
@@ -47,7 +51,7 @@
           markdown-mode
           image-mode)))
 
-(defun git-gutter-reset-to-head-parent()
+(defun my-git-gutter-reset-to-head-parent()
   "Reset gutter to HEAD^.  Support Subversion and Git."
   (interactive)
   (let* ((filename (buffer-file-name))
@@ -62,6 +66,18 @@
                    "HEAD^"))))
     (git-gutter:set-start-revision parent)
     (message "git-gutter:set-start-revision HEAD^")))
+
+;; {{ speed up magit, @see https://jakemccrary.com/blog/2020/11/14/speeding-up-magit/
+(defvar my-prefer-lightweight-magit t)
+(with-eval-after-load 'magit
+  (when my-prefer-lightweight-magit
+    (remove-hook 'magit-status-sections-hook 'magit-insert-tags-header)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-status-headers)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-unpushed-to-pushremote)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-unpulled-from-pushremote)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-unpulled-from-upstream)
+    (remove-hook 'magit-status-sections-hook 'magit-insert-unpushed-to-upstream-or-recent)))
+;; }}
 
 (defun git-gutter-toggle ()
   "Toggle git gutter."
@@ -79,12 +95,7 @@ Show the diff between current working code and git head."
   (git-gutter:set-start-revision nil)
   (message "git-gutter reset"))
 
-(global-git-gutter-mode t)
-
-(unless (fboundp 'global-display-line-numbers-mode)
- ;; git-gutter's workaround for linum-mode bug.
- ;; should not be used in `display-line-number-mode'
- (git-gutter:linum-setup))
+(my-run-with-idle-timer 2 #'global-git-gutter-mode)
 
 (global-set-key (kbd "C-x C-g") 'git-gutter:toggle)
 (global-set-key (kbd "C-x v =") 'git-gutter:popup-hunk)
@@ -292,14 +303,15 @@ If USER-SELECT-BRANCH is not nil, rebase on the tag or branch selected by user."
 
 ;; }}
 
-(defun my-git-find-file-in-commit (&optional arg)
-  "Find file in previous commit with ARG.
-If ARG is 1, find file in previous commit."
+(defun my-git-find-file-in-commit (&optional level)
+  "Find file in previous commit with LEVEL.
+If LEVEL > 0, find file in previous LEVEL commit."
   (interactive "P")
   (my-ensure 'magit)
-  (let* ((rev (concat "HEAD" (if (eq arg 1) "^")))
-         (prompt (format "Find file from commit %s" rev))
-         (cmd (my-git-files-in-rev-command rev arg))
+  (let* ((rev (concat "HEAD" (if (and level (> level 0)) (make-string level ?^))))
+         (pretty (string-trim (shell-command-to-string (format "git --no-pager log %s --oneline --no-walk" rev))))
+         (prompt (format "Find file from commit [%s]: " pretty))
+         (cmd (my-git-files-in-rev-command rev level))
          (default-directory (my-git-root-dir))
          (file (completing-read prompt (my-lines-from-command-output cmd))))
     (when file
@@ -335,33 +347,5 @@ If nothing is selected, use the word under cursor as function name to look up."
       ;; (message cmd)
       (my-ensure 'find-file-in-project)
       (ffip-show-content-in-diff-mode (shell-command-to-string cmd)))))
-
-(with-eval-after-load 'vc-msg-git
-  ;; open file of certain revision
-  (push '("m" "[m]agit-find-file"
-          (lambda ()
-            (let* ((info vc-msg-previous-commit-info))
-              (magit-find-file (plist-get info :id )
-                               (concat (vc-msg-sdk-git-rootdir)
-                                       (plist-get info :filename))))))
-        vc-msg-git-extra)
-
-  ;; copy commit hash
-  (push '("h" "[h]ash"
-          (lambda ()
-            (let* ((info vc-msg-previous-commit-info)
-                   (id (plist-get info :id)))
-              (kill-new id)
-              (message "%s => kill-ring" id))))
-        vc-msg-git-extra)
-
-  ;; copy author
-  (push '("a" "[a]uthor"
-          (lambda ()
-            (let* ((info vc-msg-previous-commit-info)
-                   (author (plist-get info :author)))
-              (kill-new author)
-              (message "%s => kill-ring" author))))
-        vc-msg-git-extra))
 
 (provide 'init-git)

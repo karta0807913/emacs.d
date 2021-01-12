@@ -79,7 +79,6 @@
     (setq pyim-dcache-backend 'pyim-dregcache)
 
     ;; automatically load pinyin dictionaries "*.pyim" under "~/.eim/"
-    ;; `directory-files-recursively' requires Emacs 25
     (let* ((files (and (file-exists-p my-pyim-directory)
                        (directory-files-recursively my-pyim-directory "\.pyim$")))
            disable-basedict)
@@ -88,9 +87,10 @@
               (mapcar (lambda (f)
                         (list :name (file-name-base f) :file f))
                       files))
-        ;; disable basedict if bigdict or greatdict is used
+        ;; disable "basedict" if "pyim-bigdict" or "pyim-greatdict" or "pyim-another-dict" is used
         (dolist (f files)
-          (when (or (string= "pyim-bigdict" (file-name-base f))
+          (when (or (string= "pyim-another-dict" (file-name-base f))
+                    (string= "pyim-bigdict" (file-name-base f))
                     (string= "pyim-greatdict" (file-name-base f)))
             (setq disable-basedict t))))
       (unless disable-basedict (pyim-basedict-enable)))))

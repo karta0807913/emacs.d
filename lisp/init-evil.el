@@ -8,8 +8,6 @@
 
 ;; {{ replace undo-tree with undo-fu
 ;; @see https://github.com/emacs-evil/evil/issues/1074
-;; (global-undo-tree-mode -1)
-(my-ensure 'undo-fu)
 ;; copied from doom-emacs
 (define-minor-mode undo-fu-mode
   "Enables `undo-fu' for the current session."
@@ -25,6 +23,8 @@
   :init-value nil
   :global t)
 (undo-fu-mode 1)
+(define-key evil-normal-state-map "u" 'undo-fu-only-undo)
+(define-key evil-normal-state-map (kbd "C-r") 'undo-fu-only-redo)
 ;; }}
 
 ;; Store more undo history to prevent loss of data
@@ -37,34 +37,36 @@
 And \"%\" key is also restored to `evil-jump-item'.")
 
 ;; {{ @see https://github.com/timcharper/evil-surround for tutorial
-(global-evil-surround-mode 1)
-(defun evil-surround-prog-mode-hook-setup ()
-  "Set up surround shortcuts."
-  (cond
-   ((memq major-mode '(sh-mode))
-    (push '(?$ . ("$(" . ")")) evil-surround-pairs-alist))
-   (t
-    (push '(?$ . ("${" . "}")) evil-surround-pairs-alist)))
+(my-run-with-idle-timer 2 #'global-evil-surround-mode)
+(with-eval-after-load 'evil-surround
+  (defun evil-surround-prog-mode-hook-setup ()
+    "Set up surround shortcuts."
+    (cond
+     ((memq major-mode '(sh-mode))
+      (push '(?$ . ("$(" . ")")) evil-surround-pairs-alist))
+     (t
+      (push '(?$ . ("${" . "}")) evil-surround-pairs-alist)))
 
-  (when (memq major-mode '(org-mode))
-    (push '(?\[ . ("[[" . "]]")) evil-surround-pairs-alist) ; [
-    (push '(?= . ("=" . "=")) evil-surround-pairs-alist))
+    (when (memq major-mode '(org-mode))
+      (push '(?\[ . ("[[" . "]]")) evil-surround-pairs-alist) ; [
+      (push '(?= . ("=" . "=")) evil-surround-pairs-alist))
 
-  (when (memq major-mode '(emacs-lisp-mode))
-    (push '(?\( . ("( " . ")")) evil-surround-pairs-alist)
-    (push '(?` . ("`" . "'")) evil-surround-pairs-alist))
+    (when (memq major-mode '(emacs-lisp-mode))
+      (push '(?\( . ("( " . ")")) evil-surround-pairs-alist)
+      (push '(?` . ("`" . "'")) evil-surround-pairs-alist))
 
-  (when (derived-mode-p 'js-mode)
-    (push '(?> . ("(e) => " . "(e)")) evil-surround-pairs-alist))
+    (when (derived-mode-p 'js-mode)
+      (push '(?j . ("JSON.stringify(" . ")")) evil-surround-pairs-alist)
+      (push '(?> . ("(e) => " . "(e)")) evil-surround-pairs-alist))
 
-  ;; generic
-  (push '(?/ . ("/" . "/")) evil-surround-pairs-alist))
-(add-hook 'prog-mode-hook 'evil-surround-prog-mode-hook-setup)
+    ;; generic
+    (push '(?/ . ("/" . "/")) evil-surround-pairs-alist))
+  (add-hook 'prog-mode-hook 'evil-surround-prog-mode-hook-setup))
 ;; }}
 
 ;; {{ For example, press `viW*`
 (setq evil-visualstar/persistent t)
-(global-evil-visualstar-mode t)
+(my-run-with-idle-timer 2 #'global-evil-visualstar-mode)
 ;; }}
 
 ;; ffip-diff-mode (read only) evil setup
@@ -361,7 +363,6 @@ If the character before and after CH is space or tab, CH is NOT slash"
 (define-key evil-insert-state-map (kbd "C-k") 'kill-line)
 (define-key evil-insert-state-map (kbd "M-j") 'yas-expand)
 (define-key evil-emacs-state-map (kbd "M-j") 'yas-expand)
-(global-set-key (kbd "C-r") 'undo-tree-redo)
 
 ;; {{
 (defvar evil-global-markers-history nil)
@@ -465,26 +466,21 @@ If the character before and after CH is space or tab, CH is NOT slash"
 ;; }}
 
 ;; {{ I select string inside single quote frequently
-(defun my-single-or-double-quote-range (count beg end type inclusive)
+(defun my-text-obj-similar-font (count beg end type inclusive)
   "Get maximum range of single or double quote text object.
 If INCLUSIVE is t, the text object is inclusive."
-  (let* ((s-range (evil-select-quote ?' beg end type count inclusive))
-         (d-range (evil-select-quote ?\" beg end type count inclusive))
-         (beg (min (nth 0 s-range) (nth 0 d-range)))
-         (end (max (nth 1 s-range) (nth 1 d-range))))
-    (setf (nth 0 s-range) beg)
-    (setf (nth 1 s-range) end)
-    s-range))
+  (let* ((range (my-create-range inclusive)))
+    (evil-range (car range) (cdr range) inclusive)))
 
 (evil-define-text-object my-evil-a-single-or-double-quote (count &optional beg end type)
   "Select a single-quoted expression."
   :extend-selection t
-  (my-single-or-double-quote-range count beg end type t))
+  (my-text-obj-similar-font count beg end type t))
 
 (evil-define-text-object my-evil-inner-single-or-double-quote (count &optional beg end type)
   "Select 'inner' single-quoted expression."
   :extend-selection nil
-  (my-single-or-double-quote-range count beg end type nil))
+  (my-text-obj-similar-font count beg end type nil))
 
 (define-key evil-outer-text-objects-map "i" #'my-evil-a-single-or-double-quote)
 (define-key evil-inner-text-objects-map "i" #'my-evil-inner-single-or-double-quote)
@@ -531,16 +527,31 @@ If INCLUSIVE is t, the text object is inclusive."
   :prefix ","
   :states '(normal visual))
 
-(defun my-rename-thing-at-point ()
-  "Rename thing at point."
-  (interactive)
+(defun my-rename-thing-at-point (&optional n)
+  "Rename thing at point.
+If N > 0, only occurrences in current N lines are renamed."
+  (interactive "P")
   (cond
    ((derived-mode-p 'js2-mode)
     ;; use `js2-mode' parser, much smarter and works in any scope
-    (js2hl-rename-thing-at-point))
+    (js2hl-rename-thing-at-point n))
    (t
     ;; simple string search/replace in function scope
     (evilmr-replace-in-defun))))
+
+(defun my-beautfiy-code (&optional indent-offset)
+  "Beautify code using INDENT-OFFSET."
+  (interactive "P")
+  (cond
+   ((derived-mode-p 'js-mode)
+    (my-js-beautify indent-offset))
+
+   ((derived-mode-p 'python-mode)
+    (when (and (boundp 'elpy-enabled-p) elpy-enabled-p))
+    (elpy-format-code))
+
+   (t
+    (message "Can only beautify code written in python/javascript"))))
 
 (my-comma-leader-def
   "," 'evilnc-comment-operator
@@ -549,7 +560,7 @@ If INCLUSIVE is t, the text object is inclusive."
   "bb" (lambda () (interactive) (switch-to-buffer nil)) ; to previous buffer
   "ef" 'end-of-defun
   "m" 'evil-set-marker
-  "em" 'my-erase-visible-buffer
+  "em" 'shellcop-erase-buffer
   "eb" 'eval-buffer
   "sc" 'scratch
   "ee" 'eval-expression
@@ -558,8 +569,8 @@ If INCLUSIVE is t, the text object is inclusive."
   "af" 'ace-maximize-window
   "ac" 'aya-create
   "pp" 'paste-from-x-clipboard ; used frequently
-  "bs" '(lambda () (interactive) (goto-edge-by-comparing-font-face -1))
-  "es" 'goto-edge-by-comparing-font-face
+  "bs" '(lambda () (interactive) (goto-char (car (my-create-range t))))
+  "es" '(lambda () (interactive) (goto-char (1- (cdr (my-create-range t)))))
   "vj" 'my-validate-json-or-js-expression
   "kc" 'kill-ring-to-clipboard
   "fn" 'cp-filename-of-current-buffer
@@ -591,10 +602,9 @@ If INCLUSIVE is t, the text object is inclusive."
   "wj" 'evil-window-down
   ;; }}
   "rv" 'my-rename-thing-at-point
+  "nm" 'js2hl-add-namespace-to-thing-at-point
   "rb" 'evilmr-replace-in-buffer
   "ts" 'evilmr-tag-selected-region ;; recommended
-  "cby" 'cb-switch-between-controller-and-view
-  "cbu" 'cb-get-url-from-controller
   "rt" 'counsel-etags-recent-tag
   "ft" 'counsel-etags-find-tag
   "yy" 'counsel-browse-kill-ring
@@ -606,8 +616,8 @@ If INCLUSIVE is t, the text object is inclusive."
   "gl" 'my-git-log-trace-definition ; find history of a function or range
   "sh" 'my-select-from-search-text-history
   "rjs" 'run-js
-  "jsr" 'js-send-region
-  "jsb" 'js-clear-send-buffer
+  "jsr" 'js-comint-send-region
+  "jsb" 'my-js-clear-send-buffer
   "kb" 'kill-buffer-and-window ;; "k" is preserved to replace "C-g"
   "ls" 'highlight-symbol
   "lq" 'highlight-symbol-query-replace
@@ -634,7 +644,7 @@ If INCLUSIVE is t, the text object is inclusive."
   "db" 'diff-region-compare-with-b
   "di" 'evilmi-delete-items
   "si" 'evilmi-select-items
-  "jb" 'js-beautify
+  "jb" 'my-beautfiy-code
   "jp" 'my-print-json-path
   ;; {{ @see http://ergoemacs.org/emacs/emacs_pinky_2020.html
   ;; `keyfreq-show' proved sub-window operations happen most.
@@ -658,8 +668,7 @@ If INCLUSIVE is t, the text object is inclusive."
   "xt" 'toggle-two-split-window
   "uu" 'my-transient-winner-undo
   "fs" 'ffip-save-ivy-last
-  "fr" 'ffip-ivy-resume
-  "fc" 'cp-ffip-ivy-last
+  "fr" 'ivy-resume
   "ss" 'my-swiper
   "fb" '(lambda ()
           (interactive)
@@ -679,7 +688,6 @@ If INCLUSIVE is t, the text object is inclusive."
           (interactive)
           (my-ensure 'org)
           (counsel-org-agenda-headlines))
-  "ut" 'undo-tree-visualize
   "ar" 'align-regexp
   "wrn" 'httpd-restart-now
   "wrd" 'httpd-restart-at-default-directory
@@ -771,35 +779,7 @@ If INCLUSIVE is t, the text object is inclusive."
   "de" 'js2-display-error-list
   "nn" 'js2-next-error
   "te" 'js2-mode-toggle-element
-  "tf" 'js2-mode-toggle-hide-functions
-  "jeo" 'js2r-expand-object
-  "jco" 'js2r-contract-object
-  "jeu" 'js2r-expand-function
-  "jcu" 'js2r-contract-function
-  "jea" 'js2r-expand-array
-  "jca" 'js2r-contract-array
-  "jwi" 'js2r-wrap-buffer-in-iife
-  "jig" 'js2r-inject-global-in-iife
-  "jev" 'js2r-extract-var
-  "jiv" 'js2r-inline-var
-  "jrv" 'js2r-rename-var
-  "jvt" 'js2r-var-to-this
-  "jag" 'js2r-add-to-globals-annotation
-  "jsv" 'js2r-split-var-declaration
-  "jss" 'js2r-split-string
-  "jef" 'js2r-extract-function
-  "jem" 'js2r-extract-method
-  "jip" 'js2r-introduce-parameter
-  "jlp" 'js2r-localize-parameter
-  "jtf" 'js2r-toggle-function-expression-and-declaration
-  "jao" 'js2r-arguments-to-object
-  "juw" 'js2r-unwrap
-  "jwl" 'js2r-wrap-in-for-loop
-  "j3i" 'js2r-ternary-to-if
-  "jlt" 'js2r-log-this
-  "jsl" 'js2r-forward-slurp
-  "jba" 'js2r-forward-barf
-  "jk" 'js2r-kill)
+  "tf" 'js2-mode-toggle-hide-functions)
 
 (general-create-definer my-jsx-leader-def
   :states '(insert emacs)
@@ -819,19 +799,7 @@ If INCLUSIVE is t, the text object is inclusive."
   "trs" 'tide-rename-symbol
   "ref" 'tide-references
   )
-
 ;; }}
-
-(defun my-evil-delete-hack (orig-func &rest args)
-  "Press `dd' to delete lines in `wgrep-mode' in evil directly."
-  ;; make buffer writable
-  (if (and (boundp 'wgrep-prepared) wgrep-prepared)
-      (wgrep-toggle-readonly-area))
-  (apply orig-func args)
-  ;; make buffer read-only
-  (if (and (boundp 'wgrep-prepared) wgrep-prepared)
-      (wgrep-toggle-readonly-area)))
-(advice-add 'evil-delete :around #'my-evil-delete-hack)
 
 ;; {{ Use `;` as leader key, for searching something
 (general-create-definer my-semicolon-leader-def
@@ -896,7 +864,7 @@ If INCLUSIVE is t, the text object is inclusive."
 ;; }}
 
 ;; {{ evil-nerd-commenter
-(evilnc-default-hotkeys t)
+(my-run-with-idle-timer 2 #'evilnc-default-hotkeys)
 (define-key evil-motion-state-map "gc" 'evilnc-comment-operator) ; same as doom-emacs
 
 (defun my-current-line-html-p (paragraph-region)
@@ -935,14 +903,14 @@ If INCLUSIVE is t, the text object is inclusive."
 ;; }}
 
 ;; {{ `evil-matchit'
-(global-evil-matchit-mode 1)
+(my-run-with-idle-timer 2 #'global-evil-matchit-mode)
 ;; }}
 
 ;; {{ evil-exchange
 ;; press gx twice to exchange, gX to cancel
 ;; change default key bindings (if you want) HERE
 ;; (setq evil-exchange-key (kbd "zx"))
-(evil-exchange-install)
+(my-run-with-idle-timer 4 #'evil-exchange-install)
 ;; }}
 
 ;; {{ @see https://github.com/syl20bnr/spacemacs/blob/master/doc/DOCUMENTATION.org#replacing-text-with-iedit
@@ -955,28 +923,7 @@ If INCLUSIVE is t, the text object is inclusive."
 ;; }}
 
 ;; {{ Evil’s f/F/t/T command can search PinYin ,
-(evil-find-char-pinyin-mode 1)
-;; }}
-
-;; {{ Port of vim-textobj-syntax.
-;; It provides evil text objects for consecutive items with same syntax highlight.
-;; press "vah" or "vih"
-(require 'evil-textobj-syntax)
-;; }}
-
-;; {{ evil-args
-;; bind evil-args text objects
-(define-key evil-inner-text-objects-map "a" 'evil-inner-arg)
-(define-key evil-outer-text-objects-map "a" 'evil-outer-arg)
-
-;; bind evil-forward/backward-args
-(define-key evil-normal-state-map "L" 'evil-forward-arg)
-(define-key evil-normal-state-map "H" 'evil-backward-arg)
-(define-key evil-motion-state-map "L" 'evil-forward-arg)
-(define-key evil-motion-state-map "H" 'evil-backward-arg)
-
-;; bind evil-jump-out-args
-(define-key evil-normal-state-map "K" 'evil-jump-out-args)
+(my-run-with-idle-timer 4 #'evil-find-char-pinyin-mode)
 ;; }}
 
 ;; ;; In insert mode, press "fg" in 0.3 second to trigger my-counsel-company

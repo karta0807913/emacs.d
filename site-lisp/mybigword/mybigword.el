@@ -4,7 +4,7 @@
 ;;
 ;; Author: Chen Bin <chenbin DOT sh AT gmail.com>
 ;; URL: https://github.com/redguardtoo/mybigword
-;; Version: 0.0.9
+;; Version: 0.1.1
 ;; Keywords: convenience
 ;; Package-Requires: ((emacs "25.1"))
 ;;
@@ -85,9 +85,11 @@
 ;;
 ;;   Move focus over the word like "egotist".  Run "M-x mybigword-play-video-of-word-at-point".
 ;;   Then mplayer plays the corresponding video at the time the word is spoken.
+;;   If video is missing, the mp3 with similar name is played.
+;;   See `mybigword-video2mp3' on how to generate mp3 from video files.
 ;;
 ;;   Please note `mybigword-play-video-of-word-at-point' can be used in other major modes.
-;;   See `mybigword-default-video-info-function' for details.
+;;   See `mybigword-default-media-info-function' for details.
 ;;
 ;;
 ;;   3. Use `mybigword-pronounce-word' to pronounce the word at point.
@@ -101,6 +103,7 @@
 
 ;;; Code:
 
+(require 'find-lisp)
 (require 'dictionary nil t)
 (require 'outline)
 (require 'org)
@@ -127,6 +130,11 @@ If nil, the default data is used."
 
 (defcustom mybigword-video-file-regexp "\\.\\(mp4\\|avi\\|mkv\\)$"
   "Regular expression to match video file names."
+  :group 'mybigword
+  :type 'string)
+
+(defcustom mybigword-audio-file-regexp "\\.\\(mp3\\|wav\\|flac\\)$"
+  "Regular expression to match audio file names."
   :group 'mybigword
   :type 'string)
 
@@ -207,8 +215,8 @@ If it's `mybigword-format-with-dictionary', the `dictionary-definition' is used.
   :group 'mybigword
   :type 'function)
 
-(defcustom mybigword-default-video-info-function
-  'mybigword-org-video-info
+(defcustom mybigword-default-media-info-function
+  'mybigword-org-media-info
   "The function to play the video of the big word."
   :group 'mybigword
   :type 'function)
@@ -233,6 +241,11 @@ If it's `mybigword-format-with-dictionary', the `dictionary-definition' is used.
   "The function to hide a word which has one parameter \" word\"."
   :group 'mybigword
   :type 'function)
+
+(defcustom mybigword-find-file-regexp "\\.\\(mp4\\|avi\\|mpeg\\|mkv\\)$"
+  "The file found in `wucuo-spell-check-directory' matches this regex."
+  :type 'string
+  :group 'mybigword)
 
 ;; internal variable
 (defvar mybigword-cache nil
@@ -421,11 +434,11 @@ FILE is the file path."
     (let* ((content (mybigword-read-file file)))
       (mybigword-show-big-words-from-content content file))))
 
-(defun mybigword-video-path (srt-path)
-  "Return video path of SRT-PATH."
+(defun mybigword-media-file-path (srt-path regexp)
+  "Return video/audio path similar to SRT-PATH and whose file name match REGEXP."
   (let* ((rlt '(nil . 99999))
          (dir (file-name-directory srt-path))
-	 (video-files (directory-files dir t mybigword-video-file-regexp))
+	 (video-files (directory-files dir t regexp))
          (base (file-name-base srt-path))
 	 (distance-fn (if (fboundp 'string-distance) 'string-distance
 	       'org-babel-edit-distance)))
@@ -474,20 +487,26 @@ FILE is the file path."
 			      command)))
     (set-process-sentinel proc 'ignore)))
 
-(defun mybigword-run-mplayer (start-time video-path)
-  "Use START-TIME and VIDEO-PATH to run mplayer."
+(defun mybigword-run-mplayer (start-time video-path &optional play-mp3-p)
+  "Use START-TIME and VIDEO-PATH to run mplayer.
+If PLAY-MP3-P is t, mp3 is played."
   (when start-time
     (let* ((default-directory (file-name-directory video-path))
 	   (cmd (format "%s -ss %s -osdlevel 2 \"%s\""
 			mybigword-mplayer-program
 			(mybigword-adjust-start-time start-time)
 			(file-name-nondirectory video-path))))
-      (mybigword-async-shell-command cmd))))
+      (cond
+       (play-mp3-p
+        ;; open a buffer to accept key binding
+        (shell-command (concat cmd " &")))
+       (t
+        (mybigword-async-shell-command cmd))))))
 
-(defun mybigword-org-video-info (word)
+(defun mybigword-org-media-info (word)
   "Find the video information of the WORD in `org-mode'.
 The information is in current org node's \"SRT_PATH\" property."
-  (let* (rlt srt-path video-path)
+  (let* (rlt srt-path)
     (cond
      ((not (eq major-mode 'org-mode))
       (message "This function can only be used in `org-mode'."))
@@ -501,15 +520,14 @@ The information is in current org node's \"SRT_PATH\" property."
      ((not (file-exists-p srt-path))
       (message "File %s does not exist." srt-path))
 
-     ((not (setq video-path (mybigword-video-path srt-path)))
-      (message "Video of subtitle %s does not exist." srt-path))
-
      (t
       (let* ((chunks (split-string (mybigword-read-file srt-path)
                                    "\n\n+[0-9]+ *\n"))
              (start-time (mybigword-mplayer-start-time chunks word)))
         (when start-time
-          (setq rlt (list :video-path video-path :start-time start-time))))))
+          (setq rlt (list :video-path (mybigword-media-file-path srt-path mybigword-video-file-regexp)
+                          :audio-path (mybigword-media-file-path srt-path mybigword-audio-file-regexp)
+                          :start-time start-time))))))
     rlt))
 
 (defun mybigword--word-at-point (&optional user-input-p)
@@ -536,19 +554,34 @@ If USER-INPUT-P is t, user need input the word."
         (setq word (thing-at-point 'word)))))
     word))
 
+(defun mybigword-mp3-path (file)
+  "Get mp3 file with similar name to FILE."
+  (and file
+       (concat (file-name-directory file)
+               (file-name-base file)
+               ".mp3")))
+
 ;;;###autoload
 (defun mybigword-play-video-of-word-at-point ()
-  "Search video's subtitle (*.srt) and play the video containing the word.
+  "Search video's subtitle (*.srt) and play the video of the word.
 The video file should be in the same directory of subtitle.
 Its file name should be similar to the subtitle's file name.
+If video file is missing, the mp3 with similar name is played.
 The word is either the word at point, or selected string or string from input."
   (interactive)
-  (let* ((word (or (mybigword--word-at-point) (mybigword--word-at-point t)))
-         info)
-    (when (and word
-               (setq info (funcall mybigword-default-video-info-function word)))
-      (mybigword-run-mplayer (plist-get info :start-time)
-                             (plist-get info :video-path)))))
+  (let* ((word (or (mybigword--word-at-point) (mybigword--word-at-point t))))
+    (when word
+      (let* ((info (funcall mybigword-default-media-info-function word))
+             (video (plist-get info :video-path))
+             (audio (plist-get info :audio-path)))
+        (cond
+         ;; try to play video first
+         ((and video (file-exists-p video))
+          (mybigword-run-mplayer (plist-get info :start-time) video))
+
+         ;; try to play audio
+         ((and audio (file-exists-p audio))
+          (mybigword-run-mplayer (plist-get info :start-time) audio t)))))))
 
 (defun mybigword-cambridge-mp3-url (word)
   "Get URL to download mp3 of WORD."
@@ -608,6 +641,7 @@ The word is either the word at point, or selected string or string from input."
     (when word
       (mybigword-pronounce-word-internal word))))
 
+
 ;;;###autoload
 (defun mybigword-show-image-of-word (&optional user-input-p)
   "Show image of word.  If USER-INPUT-P is t, user need input the word.
@@ -617,6 +651,45 @@ Please note `browse-url-generic' is used to open external browser."
     (when word
       (browse-url-generic (format "https://www.bing.com/images/search?q=%s"
                                   (replace-regexp-in-string " " "%20" word))))))
+
+(defun mybigword-find-file-predicate  (file dir)
+  "True if FILE does match `mybigword-find-file-regexp'.
+DIR is the directory containing FILE."
+  (and (not (file-directory-p (expand-file-name file dir)))
+       (string-match mybigword-find-file-regexp file)))
+
+(defun mybigword-find-directory-predicate  (dir parent)
+  "True if DIR is not a dot file, and not a symlink.
+PARENT is the parent directory of DIR."
+  ;; Skip current and parent directories
+  (not (or (string= dir ".")
+           (string= dir "..")
+           ;; Skip directories which are symlinks
+           ;; Easy way to circumvent recursive loops
+           (file-symlink-p (expand-file-name dir parent)))))
+
+;;;###autoload
+(defun mybigword-video2mp3 (directory &optional quiet)
+  "Convert videos in DIRECTORY into mp3.
+If QUIET is t, no message output."
+  (interactive "DVideo directory: ")
+  (let* ((video-files (and directory
+                           (find-lisp-find-files-internal
+                            directory
+                            #'mybigword-find-file-predicate
+                            #'mybigword-find-directory-predicate)))
+         (cnt (length video-files))
+         (i 0))
+    (when (> cnt 0)
+      (unless quiet (message "Start conversion ..."))
+      (while (< i cnt)
+        (let* ((v (nth i video-files)))
+          (unless quiet (message "%d/%d video is converted." (1+ i) cnt))
+          (shell-command (format "%s -dumpaudio -dumpfile \"%s\" \"%s\""
+                                 mybigword-mplayer-program
+                                 (mybigword-mp3-path v)
+                                 v)))
+        (setq i (1+ i))))))
 
 (provide 'mybigword)
 ;;; mybigword.el ends here

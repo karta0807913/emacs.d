@@ -1,11 +1,22 @@
 ;; -*- coding: utf-8; lexical-binding: t; -*-
 
-(defmacro my-ensure (feature)
+(defun local-require (pkg)
+  "Require PKG in site-lisp directory."
+  (unless (featurep pkg)
+    (load (expand-file-name
+           (cond
+            ((eq pkg 'go-mode-load)
+             (format "%s/go-mode/%s" my-site-lisp-dir pkg))
+            (t
+             (format "%s/%s/%s" my-site-lisp-dir pkg pkg))))
+          t t)))
+
+(defun my-ensure (feature)
   "Make sure FEATURE is required."
-  `(unless (featurep ,feature)
-     (condition-case nil
-         (require ,feature)
-       (error nil))))
+  (unless (featurep feature)
+    (condition-case nil
+        (require feature)
+      (error nil))))
 
 (defun my-git-root-dir ()
   "Git root directory."
@@ -39,10 +50,9 @@
   "Can use tags file to build imenu function"
   (my-ensure 'counsel-etags)
   (and (locate-dominating-file default-directory "TAGS")
-       ;; ctags needs extra setup to extract typescript tags
-       (file-exists-p counsel-etags-ctags-options-file)
-       (memq major-mode '(typescript-mode
-                          js-mode))))
+       ;; latest universal ctags has built in parser for javacript/typescript
+       (counsel-etags-universal-ctags-p "ctags")
+       (memq major-mode '(typescript-mode js-mode javascript-mode))))
 
 ;; {{ copied from http://ergoemacs.org/emacs/elisp_read_file_content.html
 (defun my-get-string-from-file (file)
@@ -78,19 +88,12 @@
   (dolist (pattern patterns)
     (add-to-list 'interpreter-mode-alist (cons pattern mode))))
 
-(defun font-belongs-to (pos fonts)
-  "Current font at POS belongs to FONTS."
-  (let* ((fontfaces (get-text-property pos 'face)))
-    (when (not (listp fontfaces))
-      (setf fontfaces (list fontfaces)))
-    (delq nil
-          (mapcar (lambda (f)
-                    (member f fonts))
-                  fontfaces))))
+(defun my-what-face (&optional position)
+  "Shows all faces at POSITION."
+  (let* ((face (get-text-property (or position (point)) 'face)))
+    (unless (keywordp (car-safe face)) (list face))))
 
-;;----------------------------------------------------------------------------
 ;; String utilities missing from core emacs
-;;----------------------------------------------------------------------------
 (defun string-all-matches (regex str &optional group)
   "Find all matches for `REGEX' within `STR', returning the full match string or group `GROUP'."
   (let ((result nil)
@@ -100,11 +103,6 @@
       (push (match-string group str) result)
       (setq pos (match-end group)))
     result))
-
-;; Find the directory containing a given library
-(defun directory-of-library (library-name)
-  "Return the directory in which the `LIBRARY-NAME' load file is found."
-  (file-name-as-directory (file-name-directory (find-library-name library-name))))
 
 (defun path-in-directory-p (file directory)
   "FILE is in DIRECTORY."
@@ -211,59 +209,69 @@ If HINT is empty, use symbol at point."
         (set-visited-file-name new-name)
         (set-buffer-modified-p nil)))))
 
-(defvar load-user-customized-major-mode-hook t)
-(defvar cached-normal-file-full-path nil)
+(defvar my-load-user-customized-major-mode-hook t)
 
 (defun buffer-too-big-p ()
+  "Test if current buffer is too big."
   ;; 5000 lines
   (> (buffer-size) (* 5000 80)))
 
-(defun file-too-big-p (file)
+(defun my-file-too-big-p (file)
+  "Test if FILE is too big."
   (> (nth 7 (file-attributes file))
      (* 5000 64)))
 
-(defvar force-buffer-file-temp-p nil)
+(defvar my-force-buffer-file-temp-p nil)
 (defun is-buffer-file-temp ()
   "If (buffer-file-name) is nil or a temp file or HTML file converted from org file."
   (interactive)
   (let* ((f (buffer-file-name)) (rlt t))
     (cond
-     ((not load-user-customized-major-mode-hook)
+     ((not my-load-user-customized-major-mode-hook)
       (setq rlt t))
-     ((not f)
-      ;; file does not exist at all
+
+     ((and (buffer-name) (string-match "\\* Org SRc" (buffer-name)))
       ;; org-babel edit inline code block need calling hook
       (setq rlt nil))
-     ((string= f cached-normal-file-full-path)
-      (setq rlt nil))
+
+     ((null f)
+      (setq rlt t))
+
      ((string-match (concat "^" temporary-file-directory) f)
       ;; file is create from temp directory
       (setq rlt t))
+
      ((and (string-match "\.html$" f)
            (file-exists-p (replace-regexp-in-string "\.html$" ".org" f)))
       ;; file is a html file exported from org-mode
       (setq rlt t))
-     (force-buffer-file-temp-p
+
+     (my-force-buffer-file-temp-p
       (setq rlt t))
+
      (t
-      (setq cached-normal-file-full-path f)
       (setq rlt nil)))
     rlt))
 
 (defvar my-mplayer-extra-opts ""
-  "Extra options for mplayer (ao or vo setup).  For example,
-you can '(setq my-mplayer-extra-opts \"-ao alsa -vo vdpau\")'.")
+  "Extra options for mplayer (ao or vo setup).
+For example, you can '(setq my-mplayer-extra-opts \"-ao alsa -vo vdpau\")'.")
 
 (defun my-guess-mplayer-path ()
+  "Guess cli program mplayer's path."
   (let* ((rlt "mplayer"))
     (cond
-     (*is-a-mac* (setq rlt "mplayer -quiet"))
+     (*is-a-mac*
+      (setq rlt "mplayer -quiet"))
+
      (*linux*
-      (setq rlt (format "mplayer -quiet -stop-xscreensaver %s" my-mplayer-extra-opts)))
+      (setq rlt (format "mplayer -quiet -stop-xscreensaver %s"
+                        my-mplayer-extra-opts)))
      (*cygwin*
       (if (file-executable-p "/cygdrive/c/mplayer/mplayer.exe")
           (setq rlt "/cygdrive/c/mplayer/mplayer.exe -quiet")
         (setq rlt "/cygdrive/d/mplayer/mplayer.exe -quiet")))
+
      (t ; windows
       (if (file-executable-p "c:\\\\mplayer\\\\mplayer.exe")
           (setq rlt "c:\\\\mplayer\\\\mplayer.exe -quiet")
@@ -292,7 +300,7 @@ you can '(setq my-mplayer-extra-opts \"-ao alsa -vo vdpau\")'.")
   (let* ((powershell-program (executable-find "powershell.exe")))
     (cond
      ;; Windows
-     ((fboundp 'w32-get-clipboard-data)
+     ((and *win64* (fboundp 'w32-get-clipboard-data))
       ;; `w32-set-clipboard-data' makes `w32-get-clipboard-data' always return null
       (w32-get-clipboard-data))
 
@@ -307,26 +315,47 @@ you can '(setq my-mplayer-extra-opts \"-ao alsa -vo vdpau\")'.")
      (t
       (xclip-get-selection 'clipboard)))))
 
+(defvar my-ssh-client-user nil
+  "User name of ssh client.")
+
 (defun my-pclip (str-val)
   "Put STR-VAL into clipboard."
-  (let* ((win64-clip-program (executable-find "clip.exe")))
+  (let* ((win64-clip-program (executable-find "clip.exe"))
+         ssh-client)
     (cond
-     ;; Windows
-     ((fboundp 'w32-set-clipboard-data)
-      (w32-set-clipboard-data str-val))
-
-     ;; Windows 10
+     ;; Windows 10 or Windows 7
      ((and win64-clip-program)
       (with-temp-buffer
         (insert str-val)
         (call-process-region (point-min) (point-max) win64-clip-program)))
+
+     ;; Windows
+     ((and *win64* (fboundp 'w32-set-clipboard-data))
+      ;; Don't know why, but on Windows 7 this API does not work.
+      (w32-set-clipboard-data str-val))
+
+     ;; If Emacs is inside an ssh session, place the clipboard content
+     ;; into "~/.tmp-clipboard" and send it back into ssh client
+     ;; Make sure you already set up ssh correctly.
+     ;; Only enabled if ssh server is macOS
+     ((and (setq ssh-client (getenv "SSH_CLIENT"))
+           (not (string= ssh-client ""))
+           *is-a-mac*)
+      (let* ((file "~/.tmp-clipboard")
+             (ip (car (split-string ssh-client "[ \t]+")))
+             (cmd (format "scp %s %s@%s:~/" file my-ssh-client-user ip)))
+        (when my-ssh-client-user
+          (my-write-to-file str-val file)
+          (shell-command cmd)
+          ;; clean up
+          (delete-file file))))
 
      ;; xclip can handle
      (t
       (xclip-set-selection 'clipboard str-val)))))
 ;; }}
 
-(defun should-use-minimum-resource ()
+(defun my-should-use-minimum-resource ()
   "Some files should use minimum resource (no syntax highlight, no line number display)."
   (and buffer-file-name
        (string-match-p "\.\\(mock\\|min\\|bundle\\)\.js" buffer-file-name)))
@@ -403,7 +432,7 @@ If STEP is 1,  search in forward direction, or else in backward direction."
   (let* ((region (my-comint-current-input-region)))
     (string-trim (buffer-substring-no-properties (car region) (cdr region)))))
 
-(defun my-imenu-items (&optional index-function)
+(defun my-rescan-imenu-items (&optional index-function)
   "Get imenu items using INDEX-FUNCTION."
   (my-ensure 'imenu)
   (let* ((imenu-auto-rescan t)
@@ -411,6 +440,103 @@ If STEP is 1,  search in forward direction, or else in backward direction."
          (imenu-auto-rescan-maxout (buffer-size))
          (items (imenu--make-index-alist t)))
     (delete (assoc "*Rescan*" items) items)))
+
+(defun my-create-range (&optional inclusive)
+  "Return range by font face.
+Copied from 3rd party package evil-textobj."
+  (let* ((point-face (my-what-face))
+         (pos (point))
+         (backward-point pos) ; last char when stop, including white space
+         (backward-none-space-point pos) ; last none white space char
+         (forward-point pos) ; last char when stop, including white space
+         (forward-none-space-point pos) ; last none white space char
+         (start pos)
+         (end pos))
+
+    ;; check chars backward,
+    ;; stop when char is not white space and has different face
+    (save-excursion
+      (let ((continue t))
+        (while (and continue (>= (- (point) 1) (point-min)))
+          (backward-char)
+          (if (= 32 (char-after))
+              (setq backward-point (point))
+            (if (equal point-face (my-what-face))
+                (progn (setq backward-point (point))
+                       (setq backward-none-space-point (point)))
+              (setq continue nil))))))
+
+    ;; check chars forward,
+    ;; stop when char is not white space and has different face
+    (save-excursion
+      (let ((continue t))
+        (while (and continue (< (+ (point) 1) (point-max)))
+          (forward-char)
+          (let ((forward-point-face (my-what-face)))
+            (if (= 32 (char-after))
+                (setq forward-point (point))
+              (if (equal point-face forward-point-face)
+                  (progn (setq forward-point (point))
+                         (setq forward-none-space-point (point)))
+                (setq continue nil)))))))
+
+    (cond
+     (inclusive
+      (setq start backward-none-space-point)
+      (setq end forward-none-space-point))
+     (t
+      (setq start (1+ backward-none-space-point))
+      (setq end (1- forward-none-space-point))))
+
+    (cons start (1+ end))))
+
+(defun my-get-char (position)
+  "Get character at POSITION."
+  (save-excursion
+    (goto-char position)
+    (following-char)))
+
+(defun my-pinyinlib-build-regexp-string (str)
+  "Build pinyin regexp from STR."
+  (my-ensure 'pinyinlib)
+  (let* (rlt (i 0) ch)
+    (while (< i (length str))
+      (setq ch (elt str i))
+      (setq rlt (concat rlt
+                        (cond
+                         ((and (<= ?a ch) (<= ch ?z))
+                          (pinyinlib-build-regexp-char ch))
+                         (t
+                          (char-to-string ch)))))
+      (setq i (1+ i)))
+    rlt))
+
+(defvar my-disable-idle-timer nil
+  "Function passed to `my-run-with-idle-timer' is run immediately.")
+
+(defun my-run-with-idle-timer (seconds func)
+  "After SECONDS, run function FUNC once."
+  (cond
+   (my-disable-idle-timer
+    (funcall func))
+   (t
+    (run-with-idle-timer seconds nil func))))
+
+(defun my-get-closest-imenu-item (cands)
+  "Return closest imen item from CANDS."
+  (let* ((pos (point))
+         closest)
+    (dolist (c cands)
+      (let* ((item (cdr c))
+             (m (cdr item)))
+        (when (and m (<= (marker-position m) pos))
+          (cond
+           ((not closest)
+            (setq closest item))
+           ((< (- pos (marker-position m))
+               (- pos (marker-position (cdr closest))))
+            (setq closest item))))))
+    closest))
 
 (provide 'init-utils)
 ;;; init-utils.el ends here

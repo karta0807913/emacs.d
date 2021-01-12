@@ -1,13 +1,13 @@
-;;; js2hl.el --- Highlight/rename things using `js2-mode' parser  -*- lexical-binding: t -*-
+;;; js2hl.el --- Highlight/rename things using js2-mode parser  -*- lexical-binding: t -*-
 ;;
 ;; Copyright (C) 2020 Chen Bin <chenbin DOT sh@gmail DOT com>
 ;; Copyright (C) 2016-2017 Mihai Bazon <mihai.bazon@gmail.com>
 ;;
-;; Version: 0.0.1
-;; Keywords: conveniences
+;; Version: 0.0.4
+;; Keywords: convenience
 ;; Author: Chen Bin <chenbin DOT sh AT gmail DOT com>
 ;; URL: https://github.com/redguardtoo/js2hl
-;; Package-Requires: ((emacs "24.4") (js2-mode "20190219")
+;; Package-Requires: ((emacs "25.1") (js2-mode "20190219"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -34,10 +34,13 @@
 ;; Usage,
 ;;
 ;; `js2hl-show-thing-at-point' to show things at point.
-;; Things are variable, strings, numbers, names like "this" or "super".
+;; Things are variable or it property, strings, numbers, names like "this" or "super".
 ;; It uses parser of `js2-mode' to extract correct things.
 ;;
 ;; `js2hl-rename-thing-at-point' to rename things at point.
+;;
+;; `js2hl-add-namespace-to-thing-at-point' to prepend namespace to the thing.
+;; The separator of namespace is from `js2hl-namespace-separator'.
 ;;
 ;; `js2hl-show-exits' to show exit points from the function surrounding point.
 ;; That is, `return' and `throw' statements.
@@ -50,7 +53,11 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'js2-mode nil t)
+(require 'js2-mode)
+
+(defvar js2hl-namespace-separator
+  "."
+  "The namespace separator used by `js2hl-add-namespace-to-thing-at-point'.")
 
 (defvar js2-mode-ast)
 
@@ -86,20 +93,63 @@ If NODE-LENGTH is not nil, use it to calculate end of region."
                  (js2-node-abs-end ,node))))
      (push (cons beg end) ,result)))
 
+(defun js2hl-parent-prop-get-node (name-node)
+  "If parent of NAME-NODE is property get node, return parent."
+  (let* ((parent (and name-node (js2-node-parent name-node))))
+    (and (js2-prop-get-node-p parent) parent)))
+
+(defun js2hl-parent-prop-get-node-leftest-node (name-node)
+  "Leftest node of NAME-NODE.
+Given js code \"a.b.c\", c is name node, a is the left."
+  (let* ((parent (js2hl-parent-prop-get-node name-node))
+         (left (and parent (js2-prop-get-node-left parent)))
+         property-names)
+    (push (js2-name-node-name name-node) property-names)
+    (while (and left (not (js2-name-node-p left)) )
+      (push (js2-name-node-name (js2-prop-get-node-right left)) property-names)
+      (setq left (js2-prop-get-node-left left)))
+    (list left property-names)))
+
 (defun js2hl-get-var-regions ()
   "Get variable regions."
   (let* ((name-node (js2hl-local-name-node-at-point))
-         (name (js2-name-node-name name-node))
          (len (js2-node-len name-node))
+         (name (js2-name-node-name name-node))
          (scope (js2hl-name-node-defining-scope name-node))
+         leftest
          result)
+
+    (when (and (not scope)
+               (setq leftest (js2hl-parent-prop-get-node-leftest-node name-node)))
+      (setq name (js2-name-node-name (nth 0 leftest)))
+      (setq scope (js2hl-name-node-defining-scope (nth 0 leftest))))
     (js2-visit-ast scope
                    (lambda (node end-p)
                      (when (and (not end-p)
                                 (js2hl-local-name-node-p node)
                                 (string= name (js2-name-node-name node))
                                 (eq scope (js2hl-name-node-defining-scope node)))
-                       (js2hl-push-node-region node result len))
+                       (cond
+                        ;; change properties of variable
+                        (leftest
+                         (let* (parent
+                                (i 0)
+                                (property-names (nth 1 leftest))
+                                (level (length property-names))
+                                (property-match-p t))
+                           (when (setq parent (js2hl-parent-prop-get-node node) )
+                             (while (and property-match-p (< i level))
+                               (setq property-match-p
+                                     (and (setq node (js2hl-parent-prop-get-node node))
+                                          (string= (nth i property-names)
+                                                   (js2-name-node-name (js2-prop-get-node-right node)))))
+                               (setq i (1+ i)))
+                             (when property-match-p
+                               (js2hl-push-node-region (js2-prop-get-node-right node) result len)))))
+
+                        ;; change variable name
+                        (t
+                         (js2hl-push-node-region node result len))))
                      t))
     (nreverse result)))
 
@@ -153,11 +203,14 @@ If NODE-LENGTH is not nil, use it to calculate end of region."
   "Get regions at position POS."
   (let* ((node (js2-node-at-point pos)))
     (cond
-     ((js2-name-node-p node) (js2hl-get-var-regions))
+     ((js2-name-node-p node)
+      (js2hl-get-var-regions))
+
      ((or (js2-string-node-p node)
           (js2-number-node-p node)
           (js2-regexp-node-p node))
       (js2hl-get-constant-regions node))
+
      ((js2-this-or-super-node-p node)
       (js2hl-get-this-regions node)))))
 
@@ -247,28 +300,66 @@ That is, `return' and `throw' statements."
   (let* (first-place)
     (cond
      ((and places (consp (setq first-place (nth 0 places))))
-      (buffer-substring-no-properties (car first-place) (cdr first-place)))
+      (kill-new (buffer-substring-no-properties (car first-place)
+                                                (cdr first-place))))
      (t
       ""))))
 
-;;;###autoload
-(defun js2hl-rename-thing-at-point ()
-  "Replace the highlighted things with NEW-NAME.
-Only works if the mode was called with `js2hl-show-thing-at-point'."
-  (interactive)
+(defun js2hl-rename-thing-at-point-internal (new-name-function n)
+  "Replace the highlighted things with result of calling NEW-NAME-FUNCTION.
+If N > 0, only occurrences in current N lines are renamed."
   (let* ((places (sort (js2hl-get-regions-at-point) #'js2hl-compare-regions))
          (old-name (js2hl-get-old-name places))
-         (new-name (read-string (format "Replace \"%s\" with: " old-name))))
+         (new-name (funcall new-name-function old-name))
+         (edit-begin (point-min))
+         (edit-end (point-max))
+         (cnt (length places)))
+
+    (when (and n (> 0))
+      (setq edit-begin (line-beginning-position))
+      (save-excursion
+       (forward-line (1- n))
+       (setq edit-end (line-end-position))))
+
     (when (and places new-name)
       (save-excursion
         (dolist (p (nreverse places))
           (let* ((begin (car p))
                  (end (cdr p)))
-            (delete-region begin end)
-            (goto-char begin)
-            (insert new-name)))
-        (message "%d occurrences renamed to %s" (length places) new-name)))
+            (when (and (<= edit-begin begin) (< end edit-end))
+              (delete-region begin end)
+              (goto-char begin)
+              (insert new-name)))))
+      ;; force update the AST, so user can start next renaming immediately
+      (js2-do-parse)
+      (message "%d occurrences renamed to %s" cnt new-name))
     (js2hl-forget-it)))
+
+;;;###autoload
+(defun js2hl-rename-thing-at-point (&optional n)
+  "Replace the highlighted things with NEW-NAME.
+If N > 0, only occurrences in current N lines are renamed."
+  (interactive "P")
+  (js2hl-rename-thing-at-point-internal
+   (lambda (old-name)
+     (read-string (format "Replace \"%s\" with: " old-name)))
+   n))
+
+;;;###autoload
+(defun js2hl-add-namespace-to-thing-at-point (&optional n)
+  "Prepend the highlighted things with new namespace.
+If N > 0, only occurrences in current N lines are changed.
+Namespace separator from `js2hl-namespace-separator' is automatically inserted.
+Given the thing \"var1\" and namespace \"sp1\", the new thing is \"sp1.var1\"."
+  (interactive "P")
+  (js2hl-rename-thing-at-point-internal
+   (lambda (old-name)
+     (let* ((namespace (read-string (format "Add namespace to \"%s\": " old-name))))
+       (when namespace
+         (concat namespace
+                 js2hl-namespace-separator
+                 old-name))))
+   n))
 
 ;;;###autoload
 (defun js2hl-forget-it ()

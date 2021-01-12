@@ -8,12 +8,7 @@
 (require 'lazyflymake-sdk)
 
 (defcustom lazyflymake-shell-program "shellcheck"
-  "The path to the shellcheck executable."
-  :group 'lazyflymake
-  :type 'string)
-
-(defcustom lazyflymake-shell-program-opts '("--format=gcc")
-  "The options of shellcheck executable."
+  "The path of the shellcheck linter."
   :group 'lazyflymake
   :type 'string)
 
@@ -30,9 +25,8 @@ If return nil, nothing need be done."
   "Shell script syntax linter for flymake."
   (when (executable-find lazyflymake-shell-program)
     (if lazyflymake-debug (message "lazyflymake-shell-init called"))
-    (let* ((opts lazyflymake-shell-program-opts))
-      (setq opts (add-to-list 'opts (lazyflymake-sdk-code-file) t))
-      (list lazyflymake-shell-program opts))))
+    (let* ((file (lazyflymake-sdk-code-file)))
+      (and file (list lazyflymake-shell-program (list "--format=gcc" file))))))
 
 (provide 'lazyflymake-shell)
 ;;; lazyflymake-shell.el ends here

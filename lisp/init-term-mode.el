@@ -10,10 +10,7 @@ EVENT is ignored."
 ;; {{ @see https://coredumped.dev/2020/01/04/native-shell-completion-in-emacs/
 ;; Enable auto-completion in `shell'.
 (with-eval-after-load 'shell
-  ;; `comint-terminfo-terminal' is invented in Emacs 26
-  (unless (and (boundp 'comint-terminfo-terminal)
-               comint-terminfo-terminal)
-    (setq comint-terminfo-terminal "dumb"))
+  (unless comint-terminfo-terminal (setq comint-terminfo-terminal "dumb"))
   (native-complete-setup-bash))
 
 ;; `bash-completion-tokenize' can handle garbage output of "complete -p"
@@ -31,11 +28,24 @@ EVENT is ignored."
 
 (defun shell-mode-hook-setup ()
   "Set up `shell-mode'."
+
+  ;; analyze error output in shell
+  (shellcop-start)
+
+  (setq shellcop-sub-window-has-error-function
+        (lambda ()
+          (and (eq major-mode 'js2-mode)
+               (> (length (js2-errors)) 0))))
+
   ;; hook `completion-at-point', optional
   (add-hook 'completion-at-point-functions #'native-complete-at-point nil t)
   (setq-local company-backends '((company-files company-native-complete)))
   ;; `company-native-complete' is better than `completion-at-point'
   (local-set-key (kbd "TAB") 'company-complete)
+
+  ;; @see https://github.com/redguardtoo/emacs.d/issues/882
+  (setq-local company-idle-delay 1)
+
   ;; try to kill buffer when exit shell
   (let* ((proc (get-buffer-process (current-buffer)))
          (shell (file-name-nondirectory (car (process-command proc)))))

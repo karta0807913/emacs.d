@@ -5,7 +5,7 @@
 - Fast. Only *one second* to start up
 - Robust. Never crash after package upgrade. Packages could be installed without network
 - Support Windows. You can find&grep files on Windows with minimum setup
-- Tested with Emacs 25.3, 26.3, 27.1, 28 on Linux/Windows/Cygwin/macOS/WSL(Windows Subsystem for Linux)
+- Tested with Emacs 26.3, 27.1, 28 on Linux/Windows/Cygwin/macOS/WSL(Windows Subsystem for Linux)
 - Emacs vanilla key bindings and directory layout is respected
 Usable in [[https://packages.debian.org/emacs-nox][emacs-nox]] and works in [[http://www.putty.org/][PuTTY]]
 
@@ -17,6 +17,7 @@ Usable in [[https://packages.debian.org/emacs-nox][emacs-nox]] and works in [[ht
 - [[#installation][Installation]]
   - [[#install-in-normal-way][Install in normal way]]
   - [[#install-stable-version-optional][Install stable version (OPTIONAL)]]
+  - [[#install-everything-in-one-step-optional][Install everything in one step (OPTIONAL)]]
   - [[#third-party-programs-optional][Third party programs (OPTIONAL)]]
 - [[#tutorial-optional][Tutorial (OPTIONAL)]]
   - [[#basic-tutorial][Basic tutorial]]
@@ -72,20 +73,21 @@ Usable in [[https://packages.debian.org/emacs-nox][emacs-nox]] and works in [[ht
   - [[#run-the-unit-test-before-git-commit][Run the unit test before git commit]]
   - [[#python-environment][Python environment]]
   - [[#set-up-lsp-mode][Set up lsp-mode]]
+  - [[#enable-typewriter-sounds-when-typing][Enable typewriter sounds when typing]]
 - [[#support-legacy-emacs-versions][Support legacy Emacs versions]]
-  - [[#emacs-23][Emacs 23]]
-  - [[#emacs-243][Emacs 24.3]]
+  - [[#emacs-25][Emacs 25]]
   - [[#emacs-244-and-245][Emacs 24.4 and 24.5]]
+  - [[#emacs-243][Emacs 24.3]]
+  - [[#emacs-23][Emacs 23]]
 - [[#tips][Tips]]
 - [[#report-bug][Report bug]]
 
 * Checklist
-- Emacs 26.1 is strongly recommended. It is faster and easier to set up
+- Emacs 26.1 or higher version is required
 - Please read FAQ to disable [[http://www.vim.org][Vim]] key bindings
 - Please read section "Key bindings" to learn key bindings
 - If you use Windows Emacs, you have to [[https://emacs.stackexchange.com/questions/27202/how-do-i-install-gnutls-for-emacs-25-1-on-windows][install GnuTLS Dlls manually]] to install packages from remote repositories. Or else you got error message like =error: Package `async-' is unavailable= on Windows. Please note since =Emacs 26.1=, you can download full version which works out of box
 - Most packages from [[http://melpa.org][MELPA]] are *invisible* but packages from [[https://stable.melpa.org][MELPA Stable]] are visible. You can modify variable =melpa-include-packages= in =lisp/init-elpa.el= to install unstable packages. Please choose stable packages if possible. Even advanced user could under-estimate the risk of unstable packages
-- Emacs 25 support will be dropped on January 2021. Check "Support legacy Emacs versions" if you use old versions
 - Other issues are covered in FAQ
 * Installation
 Most users should follow the section "Install in normal way".
@@ -120,6 +122,10 @@ No worries. You could answer "YES" to the question "Switch to faster package rep
 Now you are using local package repository =~/myelpa=.
 
 You can switch to online repositories like http://elpa.gnu.org or http://melpa.org by modifying =lisp/init-elpa.el=.
+** Install everything in one step (OPTIONAL)
+Download content of [[https://github.com/redguardtoo/my-emacs.d-snapshot]] into =~/.emacs.d=. That's it.
+
+It's not recommdned for daily usage because the third party packages are not optimized for latest Emacs.
 ** Third party programs (OPTIONAL)
 *** Install
 Most command line programs can be installed through =default package manager=.
@@ -507,7 +513,7 @@ Learn [[http://www.emacswiki.org/emacs/IndentationBasics][basics]]. Then use [[h
 ** Editing Lisp
 Please note [[http://emacswiki.org/emacs/ParEdit][paredit-mode]] is enabled when editing Lisp. Search "paredit cheat sheet" to learn its key bindings.
 ** Use [[https://github.com/Malabarba/smart-mode-line][smart-mode-line]] or [[https://github.com/milkypostman/powerline][powerline]]?
-Comment out =(require 'init-modeline)= in init.el at first.
+Comment out =(require 'init-modeline)= in =init.el= at first.
 ** Key bindings doesn't work?
 Other desktop applications may intercept the key bindings. For example, [[https://github.com/redguardtoo/emacs.d/issues/320][it's reported QQ on windows 8 can intercept "M-x"]].
 ** Org-mode
@@ -566,7 +572,7 @@ By default EVIL (Vim emulation in Emacs) is used. Comment out line containing =(
 ** Evil setup
 It's defined in =lisp/init-evil.el=. Press =C-z= to switch between Emacs and Vim key bindings.
 
-Please read [[https://github.com/emacs-evil/evil/raw/master/doc/evil.pdf][its PDF manual]] before using =evil-mode=.
+You could visit [[https://github.com/emacs-evil/evil/][its website]] to download its free ebook there.
 ** C++ auto-completion doesn't work?
 I assume you are using [[https://github.com/company-mode/company-mode][company-mode]]. Other packages have similar setup.
 
@@ -652,9 +658,52 @@ On macOS/Linux/Cygwin, run =make githooks= to install hooks into =.git/hooks=.
 
 Then unit test is run automatically before =git commit=.
 ** Python environment
-This setup used [[https://github.com/jorgenschaefer/elpy][elpy (Emacs Python Development Environment)]].
+We use [[https://github.com/jorgenschaefer/elpy][Elpy (Emacs Python Development Environment)]]. See its official documentation on its usage.
 
-See elpy official documentation on how to use elpy.
+The flag =elpy-disable-backend-error-display= is set to =nil= so you can easily report any error to its developers.
+
+If you don't use Elpy, please set this flag to =t=.
+
+To enable the virtual environment created by Elpy as its official guide has suggested, you can add below code into =~/.custom.el=,
+#+begin_src elisp
+(with-eval-after-load 'elpy
+  (let ((venv-dir "~/.emacs.d/elpy/rpc-venv"))
+    (if (file-exists-p venv-dir) (pyvenv-activate venv-dir))))
+#+end_src
+
+After activating the virtual environment created by Elpy, you could also backup its required packages,
+#+begin_src sh
+source ~/.emacs.d/elpy/rpc-venv/bin/activate && pip freeze > elpy-requirements.txt && deactivate
+#+end_src
+
+Then restore the packages,
+#+begin_src sh
+source ~/.emacs.d/elpy/rpc-venv/bin/activate && pip install -r elpy-requirements.txt && deactivate
+#+end_src
+
+My =elpy-requirements.txt= (Python 3.9.1),
+#+begin_example
+appdirs==1.4.4
+autopep8==1.5.4
+black==20.8b1
+click==7.1.2
+flake8==3.8.4
+jedi==0.18.0
+mccabe==0.6.1
+mypy-extensions==0.4.3
+parso==0.8.1
+pathspec==0.8.1
+pycodestyle==2.6.0
+pyflakes==2.2.0
+regex==2020.11.13
+rope==0.18.0
+toml==0.10.2
+typed-ast==1.4.1
+typing-extensions==3.7.4.3
+yapf==0.30.0
+#+end_example
+
+You might want to modify =include-system-site-packages= in =~/.emacs.d/elpy/rpc-venv/pyvenv.cfg=
 ** Set up [[https://github.com/emacs-lsp/lsp-mode][lsp-mode]]
 You could insert below code into =~/.custom.el=,
 #+begin_src elisp
@@ -691,7 +740,21 @@ lsp-on-touch-time) 120) ;; 2 mins
 #+end_src
 
 Then run `M-x lsp` to start lsp client and server. Check [[https://github.com/emacs-lsp/lsp-mode]] on how to install lsp server.
+** Enable typewriter sounds when typing
+Run =M-x my-toggle-typewriter=. Please check bundled =typewriter-mode.el= for further setup.
 * Support legacy Emacs versions
+** Emacs 25
+Version 3.2 is the last version to support =Emacs 25=
+
+Please use [[https://github.com/redguardtoo/emacs.d/archive/3.1.zip]] and [[https://github.com/redguardtoo/myelpa/archive/3.1.zip]].
+** Emacs 24.4 and 24.5
+Version 2.9 is the last version to support =Emacs 24.4+=
+
+Please use [[https://github.com/redguardtoo/emacs.d/archive/2.9.zip]] and [[https://github.com/redguardtoo/myelpa/archive/2.9.zip]].
+** Emacs 24.3
+Version 2.6 is the last version to support =Emacs 24.3=.
+
+Download [[https://github.com/redguardtoo/emacs.d/archive/2.6.zip]] and [[https://github.com/redguardtoo/myelpa/archive/2.6.zip]] and you are good to go.
 ** Emacs 23
 Version 1.2 of this setup is the last version to support Emacs v23.
 
@@ -699,18 +762,11 @@ Here are the steps to use that setup:
 - Download [[https://github.com/redguardtoo/emacs.d/archive/1.2.zip]]
 - Download [[https://github.com/redguardtoo/myelpa/archive/1.2.zip]]
 - Follow the section =Install stable version in easiest way= but skip the download steps
-** Emacs 24.3
-Version 2.6 is the last version to support =Emacs 24.3=.
-
-Download [[https://github.com/redguardtoo/emacs.d/archive/2.6.zip]] and [[https://github.com/redguardtoo/myelpa/archive/2.6.zip]] and you are good to go.
-** Emacs 24.4 and 24.5
-Version 2.9 is the last version to support =Emacs 24.4+=
-
-Please use [[https://github.com/redguardtoo/emacs.d/archive/2.9.zip]] and [[https://github.com/redguardtoo/myelpa/archive/2.9.zip]].
 * Tips
 - Never turn off any bundled mode if it's on by default. Future version of Emacs may assume it's on. Tweak its flag in mode hook instead!
 - Git skills are *extremely useful*. Please read the chapters "Git Basics", "Git Branching", "Git Tools" from [[https://git-scm.com/book/en/][Pro Git]]
 - You can run =optimize-emacs-startup= to compile "*.el" under =lisp/=
+- Many advanced features in this configuration is only enabled in my personal =~/.custom.el=. Grep =defvar my-.*= in =~/.emacs.d/lisp/= to find them.  You can start from =init-company.el= and =init-spelling.el=.
 * Report bug
 Please check [[http://www.emacswiki.org/emacs/][EmacsWiki]] and my FAQ first.
 
