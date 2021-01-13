@@ -159,7 +159,7 @@
         ;; }}
         ))
 
-(defvar my-ask-elpa-mirror t)
+(defvar my-ask-elpa-mirror nil)
 (when (and (not noninteractive) ; no popup in batch mode
            my-ask-elpa-mirror
            (not (file-exists-p (file-truename (concat my-emacs-d "elpa"))))
@@ -348,7 +348,7 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'pdf-tools)
 (require-package 'pyim)
 (require-package 'pyim-wbdict) ; someone may use wubi IME, not me
-;; (require-package 'lsp-latex)
+(require-package 'lsp-latex)
 (require-package 'esup)
 
 ;; {{ Fixed expiring GNU ELPA keys
