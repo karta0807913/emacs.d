@@ -2,19 +2,20 @@ FROM ubuntu:20.04
 
 WORKDIR /root
 
-RUN sed -i 's/archive/tw.archive/' /etc/apt/sources.list
-
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN sed -i 's/archive/tw.archive/' /etc/apt/sources.list
+
 RUN apt-get update && \
-    apt-get install -y wget software-properties-common && \
-    wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.0.1/clang+llvm-11.0.1-$(uname -m)-linux-gnu-ubuntu-20.10.tar.xz && \
-    tar -xvf clang+llvm-11.0.1-$(uname -m)-linux-gnu-ubuntu-20.10.tar.xz && \
-    rm clang+llvm-11.0.1-$(uname -m)-linux-gnu-ubuntu-20.10.tar.xz && \
-    cd clang+llvm-11.0.1-$(uname -m)-linux-gnu-ubuntu-20.10 && \
-    cp -R . /usr && \
-    cd ../ && rm -rf clang+llvm-11.0.1-$(uname -m)-linux-gnu-ubuntu-20.10 && \
+    apt-get install -y clangd-10 && \
+    cp /usr/bin/clangd-10 /usr/bin/clangd && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+    apt-get install -y wget software-properties-common &&\
     add-apt-repository -y ppa:kelleyk/emacs && \
+    apt-get update && \
     apt-get install -y emacs27 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -25,5 +26,16 @@ COPY .custom.el /root/
 RUN [ "emacs", "--script", "~/.emacs.d/init.el" ]
 
 ENV TERM=xterm-256color
+
+RUN mkdir /root/libs && printf '\
+\n\
+if ! [ "$#" = "1" ]; then\n\
+    echo "usage $0 <executable>";\n\
+    exit 1; \n \
+fi;\n\
+\n\
+ldd "$1" | awk %s/lib/{ print $3 }%s | grep "lib" | xargs -i cp {} /root/libs;\n' "'" "'" > packet && \
+chmod 544 packet && \
+cp /usr/bin/clangd-10 /usr/bin/clangd
 
 CMD [ "emacs", "-nw" ]

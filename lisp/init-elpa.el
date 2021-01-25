@@ -292,7 +292,6 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'js-doc)
 (require-package 'js2-mode)
 (require-package 'rjsx-mode)
-(require-package 'tide)
 (require-package 'go-mode)
 (require-package 'flycheck)
 (require-package 'company-lsp)

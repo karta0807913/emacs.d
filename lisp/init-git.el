@@ -67,18 +67,6 @@
     (git-gutter:set-start-revision parent)
     (message "git-gutter:set-start-revision HEAD^")))
 
-;; {{ speed up magit, @see https://jakemccrary.com/blog/2020/11/14/speeding-up-magit/
-(defvar my-prefer-lightweight-magit nil)
-(with-eval-after-load 'magit
-  (when my-prefer-lightweight-magit
-    (remove-hook 'magit-status-sections-hook 'magit-insert-tags-header)
-    (remove-hook 'magit-status-sections-hook 'magit-insert-status-headers)
-    (remove-hook 'magit-status-sections-hook 'magit-insert-unpushed-to-pushremote)
-    (remove-hook 'magit-status-sections-hook 'magit-insert-unpulled-from-pushremote)
-    (remove-hook 'magit-status-sections-hook 'magit-insert-unpulled-from-upstream)
-    (remove-hook 'magit-status-sections-hook 'magit-insert-unpushed-to-upstream-or-recent)))
-;; }}
-
 (defun git-gutter-toggle ()
   "Toggle git gutter."
   (interactive)

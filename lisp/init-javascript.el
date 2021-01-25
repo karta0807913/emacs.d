@@ -82,10 +82,18 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
   (define-key js2-mode-map (kbd "C-c C-w") nil))
 ;; }}
 
+(defun setup-lsp-mode ()
+  (interactive)
+  (flycheck-mode +1)
+  (lsp)
+  (add-hook 'before-save-hook 'lsp-format-buffer))
+
+(add-hook 'typescript-mode-hook #'setup-lsp-mode)
+
 (defun my-js2-mode-setup()
   "Set up javascript."
   (unless (is-buffer-file-temp)
-    (tide-setup)
+    (setup-lsp-mode)
     ;; if use node.js we need nice output
     (js2-imenu-extras-mode)
     (setq mode-name "JS2")
@@ -98,6 +106,10 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
     (setq forward-sexp-function nil)))
 
 (add-hook 'js2-mode-hook 'my-js2-mode-setup)
+(add-hook 'rjsx-mode-hook (lambda ()
+                            (setq evil-shift-width 2)
+                            (setq js-indent-level 2)
+                            (setq javascript-indent-level 2)))
 
 ;; @see https://github.com/felipeochoa/rjsx-mode/issues/33
 (with-eval-after-load 'rjsx-mode
@@ -143,16 +155,6 @@ INDENT-SIZE decide the indentation level.
 
 ;; Latest rjsx-mode does not have indentation issue
 ;; @see https://emacs.stackexchange.com/questions/33536/how-to-edit-jsx-react-files-in-emacs
-
-;; tide-mode setup
-(defun setup-tide-mode ()
-  (interactive)
-  (tide-setup)
-  (flycheck-mode 1)
-  (tide-hl-identifier-mode 1))
-
-(add-hook 'before-save-hook 'tide-format-before-save)
-(add-hook 'typescript-mode-hook #'setup-tide-mode)
 
 (setq-default js2-additional-externs
               '("$"
