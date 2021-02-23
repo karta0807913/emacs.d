@@ -25,12 +25,19 @@ RUN wget https://golang.org/dl/go1.14.15.linux-amd64.tar.gz -O golang.tar.gz && 
     rm -rf /var/lib/apt/lists/* && \
     GO111MODULE=on /usr/local/go/bin/go get golang.org/x/tools/gopls@latest; exit 0
 
+# install emacs
 RUN apt-get update && \
     apt-get install -y wget software-properties-common &&\
     add-apt-repository -y ppa:kelleyk/emacs && \
     apt-get update && \
     apt-get install -y emacs27 && \
     apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# chinese support
+RUN apt-get update && \
+    apt-get install -y language-pack-en language-pack-zh-hant language-selector-common && \
+    apt-get -y install $(check-language-support) && \
     rm -rf /var/lib/apt/lists/*
 
 COPY . /root/.emacs.d/
@@ -40,11 +47,6 @@ RUN emacs --script /root/.emacs.d/init.el
 
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/go/bin:/usr/local/go/bin
 ENV TERM=xterm-256color
-
-RUN apt-get update && \
-    apt-get install -y language-pack-en language-pack-zh-hant language-selector-common && \
-    apt-get -y install $(check-language-support) && \
-    rm -rf /var/lib/apt/lists/*
 
 ENV LANG=en_US.UTF-8
 
