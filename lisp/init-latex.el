@@ -6,19 +6,6 @@
   (flycheck-mode +1)
   (flyspell-mode +1)
 
-  (defun lsp-latex-toggle-xelatex ()
-    (interactive)
-    (let ((result
-           (catch 'result
-             (let ((index 0))
-               (while (< index (length lsp-latex-build-args))
-                 (if (equal (elt lsp-latex-build-args index) "-xelatex")
-                     (throw 'result (delete '"-xelatex" lsp-latex-build-args)))
-                 (setq index (1+ index))
-                 )
-               (throw 'result '["-pdf" "-interaction=nonstopmode" "-synctex=1" "-xelatex" "%f" ]))
-             )))
-      (setq lsp-latex-build-args result)))
   (save-excursion
     (goto-char (point-min))
     (let (
@@ -30,6 +17,11 @@
         (if (or (equal n "xelatex") (equal n "program=xelatex"))
             (setq lsp-latex-build-args
                   '["-pdf" "-interaction=nonstopmode" "-synctex=1" "-xelatex" "%f" ])))))
+  (setq lsp-latex-forward-search-executable "zathura")
+  (setq lsp-latex-forward-search-args (vector "-x" "emacsclient -n +%{line} %f"  "--synctex-forward" "%l:1:%f" "%p" ))
+
+  (when (or (not (fboundp 'server-running-p)) (not (server-running-p)))
+    (server-start))
 
   (lsp))
 
