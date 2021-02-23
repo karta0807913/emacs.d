@@ -4,13 +4,26 @@ WORKDIR /root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN sed -i 's/archive/tw.archive/' /etc/apt/sources.list
-
+# clangd 10, wget, curl and git
 RUN apt-get update && \
-    apt-get install -y clangd-10 && \
+    apt-get install -y clangd-10 wget curl git && \
     cp /usr/bin/clangd-10 /usr/bin/clangd && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# texlab
+RUN wget "https://github.com/latex-lsp/texlab/releases/download/v2.2.2/texlab-x86_64-linux.tar.gz" -O texlab.tar.gz && tar -xf texlab.tar.gz && mv texlab /usr/bin && rm -f texlab.tar.gz
+
+# nodejs 14 and theia-ide
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && apt-get update && apt-get install -y nodejs && npm i -g typescript-language-server; npm i -g typescript && rm -rf /var/lib/apt/lists/*
+
+# gopls and golang-1.13
+RUN wget https://golang.org/dl/go1.14.15.linux-amd64.tar.gz -O golang.tar.gz && \
+    tar -C /usr/local -xzf golang.tar.gz && \
+    rm -rf golang.tar.gz && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    GO111MODULE=on /usr/local/go/bin/go get golang.org/x/tools/gopls@latest; exit 0
 
 RUN apt-get update && \
     apt-get install -y wget software-properties-common &&\
@@ -23,19 +36,16 @@ RUN apt-get update && \
 COPY . /root/.emacs.d/
 COPY .custom.el /root/
 
-RUN [ "emacs", "--script", "~/.emacs.d/init.el" ]
+RUN emacs --script /root/.emacs.d/init.el
 
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/go/bin:/usr/local/go/bin
 ENV TERM=xterm-256color
 
-RUN mkdir /root/libs && printf '\
-\n\
-if ! [ "$#" = "1" ]; then\n\
-    echo "usage $0 <executable>";\n\
-    exit 1; \n \
-fi;\n\
-\n\
-ldd "$1" | awk %s/lib/{ print $3 }%s | grep "lib" | xargs -i cp {} /root/libs;\n' "'" "'" > packet && \
-chmod 544 packet && \
-cp /usr/bin/clangd-10 /usr/bin/clangd
+RUN apt-get update && \
+    apt-get install -y language-pack-en language-pack-zh-hant language-selector-common && \
+    apt-get -y install $(check-language-support) && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LANG=en_US.UTF-8
 
 CMD [ "emacs", "-nw" ]

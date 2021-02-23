@@ -1,0 +1,5 @@
+FROM my_editor:base
+
+RUN apt-get update && \
+    apt-get install -y gdb clang-11 && \
+    rm -rf /var/lib/apt/lists/*

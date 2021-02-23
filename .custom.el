@@ -5,7 +5,9 @@
 
 (setq create-lockfiles nil) ;; don't create lock files
 (setq visible-bell nil)
-(load-theme 'moe-dark)
+
+(when (eq (member "-scriptload" command-line-args) nil)
+      (load-theme 'moe-dark t))
 ;; (load-theme 'ample-flat) ;; for putty
 
 (setq neo-window-width 35)
