@@ -300,7 +300,6 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'rjsx-mode)
 (require-package 'go-mode)
 (require-package 'flycheck)
-(require-package 'company-lsp)
 (require-package 'tagedit)
 (require-package 'git-link)
 (require-package 'cliphist)
