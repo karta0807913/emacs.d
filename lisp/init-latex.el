@@ -23,6 +23,7 @@
   (when (or (not (fboundp 'server-running-p)) (not (server-running-p)))
     (server-start))
 
+  (electric-pair-mode +1)
   (lsp))
 
 (with-eval-after-load "tex-mode"
