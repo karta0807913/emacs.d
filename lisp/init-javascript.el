@@ -155,7 +155,6 @@ INDENT-SIZE decide the indentation level.
 
 ;; Latest rjsx-mode does not have indentation issue
 ;; @see https://emacs.stackexchange.com/questions/33536/how-to-edit-jsx-react-files-in-emacs
-
 (setq-default js2-additional-externs
               '("$"
                 "$A" ; salesforce lightning component

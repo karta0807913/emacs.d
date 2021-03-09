@@ -1,5 +1,7 @@
 ;; -*- coding: utf-8; lexical-binding: t; -*-
 
+;; Please note functions here could be used in ~/.custom.el
+
 (defun local-require (pkg)
   "Require PKG in site-lisp directory."
   (unless (featurep pkg)
@@ -78,18 +80,18 @@
     (my-write-to-file str file)))
 
 ;; Handier way to add modes to auto-mode-alist
-(defun add-auto-mode (mode &rest patterns)
+(defun my-add-auto-mode (mode &rest patterns)
   "Add entries to `auto-mode-alist' to use `MODE' for all given file `PATTERNS'."
   (dolist (pattern patterns)
-    (add-to-list 'auto-mode-alist (cons pattern mode))))
+    (push (cons pattern mode) auto-mode-alist)))
 
-(defun add-interpreter-mode (mode &rest patterns)
+(defun my-add-interpreter-mode (mode &rest patterns)
   "Add entries to `interpreter-mode-alist' to use `MODE' for all given file `PATTERNS'."
   (dolist (pattern patterns)
-    (add-to-list 'interpreter-mode-alist (cons pattern mode))))
+    (push (cons pattern mode) interpreter-mode-alist )))
 
 (defun my-what-face (&optional position)
-  "Shows all faces at POSITION."
+  "Show all faces at POSITION."
   (let* ((face (get-text-property (or position (point)) 'face)))
     (unless (keywordp (car-safe face)) (list face))))
 
@@ -522,21 +524,60 @@ Copied from 3rd party package evil-textobj."
    (t
     (run-with-idle-timer seconds nil func))))
 
+(defun my-imenu-item-position (item)
+  "Handle some strange imenu ITEM."
+  (if (markerp item) (marker-position item) item))
+
 (defun my-get-closest-imenu-item (cands)
-  "Return closest imen item from CANDS."
+  "Return closest imenu item from CANDS."
   (let* ((pos (point))
          closest)
     (dolist (c cands)
       (let* ((item (cdr c))
              (m (cdr item)))
-        (when (and m (<= (marker-position m) pos))
+        (when (and m (<= (my-imenu-item-position m) pos))
           (cond
            ((not closest)
             (setq closest item))
-           ((< (- pos (marker-position m))
-               (- pos (marker-position (cdr closest))))
+           ((< (- pos (my-imenu-item-position m))
+               (- pos (my-imenu-item-position (cdr closest))))
             (setq closest item))))))
     closest))
+
+(defun my-setup-extra-keymap (extra-fn-list hint fn &rest args)
+  "Map EXTRA-FN-LIST to new keymap and show HINT after calling FN with ARGS."
+  (let ((echo-keystrokes nil))
+    (apply fn args)
+    (message hint)
+    (set-transient-map
+     (let ((map (make-sparse-keymap)))
+       (dolist (item extra-fn-list)
+         (define-key map (kbd (nth 0 item)) (nth 1 item)))
+       map)
+     t)))
+
+;; @see http://emacs.stackexchange.com/questions/14129/which-keyboard-shortcut-to-use-for-navigating-out-of-a-string
+(defun my-font-face-similar-p (f1 f2)
+  "Font face F1 and F2 are similar or same."
+  ;; (message "f1=%s f2=%s" f1 f2)
+  ;; in emacs-lisp-mode, the '^' from "^abde" has list of faces:
+  ;;   (font-lock-negation-char-face font-lock-string-face)
+  (if (listp f1) (setq f1 (nth 1 f1)))
+  (if (listp f2) (setq f2 (nth 1 f2)))
+
+  (or (eq f1 f2)
+      ;; C++ comment has different font face for limit and content
+      ;; f1 or f2 could be a function object because of rainbow mode
+      (and (string-match "-comment-" (format "%s" f1))
+           (string-match "-comment-" (format "%s" f2)))))
+
+(defun my-font-face-at-point-similar-p (font-face-list)
+  "Test if font face at point is similar to any font in FONT-FACE-LIST."
+  (let* ((f (get-text-property (point) 'face))
+         rlt)
+    (dolist (ff font-face-list)
+      (if (my-font-face-similar-p f ff) (setq rlt t)))
+    rlt))
 
 (provide 'init-utils)
 ;;; init-utils.el ends here

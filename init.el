@@ -103,7 +103,7 @@
   (require-init 'init-yasnippet t)
   (require-init 'init-cc-mode t)
   (require-init 'init-linum-mode)
-  (require-init 'init-git t)
+  (require-init 'init-git)
   (require-init 'init-gtags t)
   (require-init 'init-clipboard)
   (require-init 'init-ctags t)
@@ -163,6 +163,16 @@
     ;; It's dependent on *.el in `my-site-lisp-dir'
     (load (expand-file-name "~/.custom.el") t nil)))
 
+;; @see https://www.reddit.com/r/emacs/comments/55ork0/is_emacs_251_noticeably_slower_than_245_on_windows/
+;; Emacs 25 does gc too frequently
+;; (setq garbage-collection-messages t) ; for debug
+(defun my-cleanup-gc ()
+  "Clean up gc."
+  (setq gc-cons-threshold  67108864) ; 64M
+  (setq gc-cons-percentage 0.1) ; original value
+  (garbage-collect))
+
+(run-with-idle-timer 4 nil #'my-cleanup-gc)
 
 ;; @see https://www.reddit.com/r/emacs/comments/55ork0/is_emacs_251_noticeably_slower_than_245_on_windows/
 ;; Emacs 25 does gc too frequently
