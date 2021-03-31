@@ -18,7 +18,7 @@
             (setq lsp-latex-build-args
                   '["-pdf" "-interaction=nonstopmode" "-synctex=1" "-xelatex" "%f" ])))))
   (setq lsp-latex-forward-search-executable "zathura")
-  (setq lsp-latex-forward-search-args (vector "-x" "emacsclient -n +%{line} %f"  "--synctex-forward" "%l:1:%f" "%p" ))
+  (setq lsp-latex-forward-search-args (vector "-x" "emacsclient -n +%{line} %{input}"  "--synctex-forward" "%l:1:%f" "%p" ))
 
   (when (or (not (fboundp 'server-running-p)) (not (server-running-p)))
     (server-start))
