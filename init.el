@@ -121,6 +121,7 @@
   (require-init 'init-httpd t)
   (require-init 'init-go)
   (require-init 'init-latex)
+  (require-init 'init-dart)
 
   ;; projectile costs 7% startup time
 
