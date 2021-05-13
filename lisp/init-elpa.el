@@ -37,6 +37,8 @@
     racket-mode
     auto-package-update
     web-mode
+    kv
+    esxml ; nov is dependent on latest esxml
     nov
     bbdb
     esup ; Emacs start up profiler
@@ -47,6 +49,7 @@
     highlight-symbol
     undo-fu
     command-log-mode
+    evil ; @see https://github.com/emacs-evil/evil/commit/19cc5f8eef8bfffdec8082b604c7129782acb332
     ;; lsp-mode ; stable version has performance issue, but unstable version sends too many warnings
     vimrc-mode
     rjsx-mode ; fixed the indent issue in jsx
@@ -132,7 +135,11 @@
     zoutline
     company-c-headers
     lsp-latex
-    company-statistics)
+    company-statistics
+    dap-mode
+    lsp-mode
+    lsp-dart
+    dart-mode)
   "Packages to install from melpa-unstable.")
 
 (defvar melpa-stable-banned-packages nil
@@ -259,7 +266,6 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'nvm)
 (require-package 'writeroom-mode)
 (require-package 'haml-mode)
-(require-package 'scss-mode)
 (require-package 'markdown-mode)
 (require-package 'link)
 (require-package 'connection)
@@ -355,6 +361,8 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'lsp-latex)
 (require-package 'pyim-basedict)
 (require-package 'esup)
+(require-package 'dart-mode)
+(require-package 'lsp-dart)
 
 ;; {{ Fixed expiring GNU ELPA keys
 ;; GNU ELPA GPG key will expire on Sep-2019. So we need install this package to
@@ -376,6 +384,8 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'ace-pinyin)
 (require-package 'which-key)
 (require-package 'highlight-symbol)
+;; org-roam requires new version of org-mode bundled with Emacs 27
+(when *emacs27* (require-package 'org-roam))
 
 ;; speed up CI
 (unless my-disable-idle-timer

@@ -44,6 +44,7 @@
 (autoload 'counsel-etags-filename-p "counsel-etags" "" t nil)
 (autoload 'counsel-etags-grep "counsel-etags" "" t nil)
 (autoload 'counsel-etags-recent-tag "counsel-etags" "" t nil)
+(autoload 'imenu-extra-auto-setup "imenu-extra" "" t nil)
 (autoload 'lazyflymake-start "lazyflymake" "" t nil)
 (autoload 'lazyflymake-start-buffer-checking-process "lazyflymake" "" t nil)
 (autoload 'wucuo-start "wucuo" "" t nil)
@@ -99,6 +100,7 @@
 (autoload 'rjsx-mode "rjsx-mode" nil t)
 (autoload 'go-mode "go-mode" nil t)
 (autoload 'lsp-latex "lsp-latex")
+(autoload 'lsp-dart "lsp-dart")
 (autoload 'global-git-gutter-mode "git-gutter" "" t)
 
 (provide 'init-autoload)
