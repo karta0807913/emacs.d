@@ -1,0 +1,43 @@
+FROM my_editor:base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+WORKDIR /
+
+RUN sed -i 's/archive\.ubuntu\.com/tw.archive.ubuntu.com/' /etc/apt/sources.list
+RUN apt-get update && apt-get install -y git sudo libglu1-mesa default-jre pulseaudio libxcomposite1 libxcursor1 curl unzip && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd code && useradd -u 1000 -g code -g sudo -d /home/code code && chmod 600 /etc/sudoers && \
+    echo 'code ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN mkdir /flutter /android-sdk && chown -R code:code /android-sdk /flutter
+
+USER code
+
+RUN cd ~/ && curl -L 'https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip' > commandlinetools.zip && \
+    unzip commandlinetools.zip && rm commandlinetools.zip && \
+    mkdir -p /android-sdk/cmdline-tools/ && mv cmdline-tools /android-sdk/cmdline-tools/latest
+
+RUN git clone https://github.com/flutter/flutter.git -b stable --depth 1
+
+ENV ANDROID_SDK_HOME=/android-sdk
+ 
+RUN (yes | /android-sdk/cmdline-tools/latest/bin/sdkmanager "sources;android-30" "platforms;android-30" "build-tools;30.0.3" "system-images;android-28;google_apis;x86_64") && \
+    rm -rf /android-sdk/emulator && (yes | /android-sdk/cmdline-tools/latest/bin/sdkmanager "emulator")
+RUN yes | /android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+
+RUN /flutter/bin/flutter config --android-sdk /android-sdk && /flutter/bin/flutter doctor
+ 
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/flutter/bin:/android-sdk/cmdline-tools/latest/bin:/android-sdk/emulator
+
+ENV DEBIAN_FRONTEND=
+
+## create emulator named "test"
+# RUN yes '' | avdmanager create avd -k 'system-images;android-28;google_apis;x86_64' -n test
+
+## run emulator "test"
+# RUN emulator -avd test
+
+WORKDIR /home/code
+
+CMD [ "emacs", "-nw" ]
