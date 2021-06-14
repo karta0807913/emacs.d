@@ -686,6 +686,7 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "fs" 'ffip-save-ivy-last
   "fr" 'ivy-resume
   "ss" 'my-swiper
+  "sf" 'shellcop-search-in-shell-buffer-of-other-window
   "fb" '(lambda ()
           (interactive)
           (my-ensure 'wucuo)
@@ -788,40 +789,6 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "ui" 'gud-stepi
   "uc" 'gud-cont
   "uf" 'gud-finish)
-
-;; per-major-mode setup
-
-(general-create-definer my-javascript-leader-def
-  :prefix "SPC"
-  :non-normal-prefix "M-SPC"
-  :states '(normal motion insert emacs)
-  :keymaps 'js2-mode-map)
-
-(my-javascript-leader-def
-  "de" 'js2-display-error-list
-  "nn" 'js2-next-error
-  "te" 'js2-mode-toggle-element
-  "tf" 'js2-mode-toggle-hide-functions)
-
-(general-create-definer my-jsx-leader-def
-  :states '(insert emacs)
-  :keymaps 'rjsx-mode-map)
-(my-jsx-leader-def
- "<" 'rjsx-electric-lt
- ">" 'rjsx-electric-gt)
-
-(general-create-definer my-tide-leader-def
-  :prefix ","
-  :states '(normal visual)
-  :keymaps 'tide-mode-map)
-(my-tide-leader-def
-  "tj" 'tide-jsdoc-template
-  "tf" 'tide-fix
-  "trf" 'tide-rename-file
-  "trs" 'tide-rename-symbol
-  "ref" 'tide-references
-  )
-;; }}
 
 ;; {{ Use `;` as leader key, for searching something
 (general-create-definer my-semicolon-leader-def
@@ -1000,5 +967,40 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   ;; Cursor is always black because of evil.
   ;; Here is the workaround
   (setq evil-default-cursor t))
+
+
+;; {{ per-major-mode setup
+(general-create-definer my-javascript-leader-def
+  :prefix "SPC"
+  :non-normal-prefix "M-SPC"
+  :states '(normal motion insert emacs)
+  :keymaps 'js2-mode-map)
+
+(my-javascript-leader-def
+  "de" 'js2-display-error-list
+  "nn" 'js2-next-error
+  "te" 'js2-mode-toggle-element
+  "tf" 'js2-mode-toggle-hide-functions)
+
+(general-create-definer my-org-leader-def
+  :prefix ";"
+  :non-normal-prefix "M-;"
+  :states '(normal motion visual)
+  :keymaps 'org-mode-map)
+
+(my-org-leader-def
+  "f" 'my-open-pdf-from-history
+  "n" 'my-open-pdf-next-page
+  "g" 'my-open-pdf-goto-page
+  "p" 'my-open-pdf-previous-page)
+
+(general-create-definer my-jsx-leader-def
+  :states '(insert emacs)
+  :keymaps 'rjsx-mode-map)
+
+(my-jsx-leader-def
+ "<" 'rjsx-electric-lt
+ ">" 'rjsx-electric-gt)
+;; }}
 
 (provide 'init-evil)

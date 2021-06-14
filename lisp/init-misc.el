@@ -1227,36 +1227,46 @@ See https://github.com/RafayGhafoor/Subscene-Subtitle-Grabber."
 (add-hook 'markdown-mode-hook 'markdown-mode-hook-setup)
 ;; }}
 
-;; {{ exe path
-(with-eval-after-load 'exec-path-from-shell
-  (dolist (var '("SSH_AUTH_SOCK" "SSH_AGENT_PID" "GPG_AGENT_INFO"))
-    (push var exec-path-from-shell-variables)))
+;; {{ pdf
+(defun my-open-pdf-from-history ()
+  "Open pdf and go to page from history."
+  (interactive)
+  (let* ((link (completing-read "Open pdf:::page: " my-pdf-view-from-history)))
+    (when link
+      (let* ((items (split-string link ":::"))
+             (pdf-file (nth 0 items))
+             (pdf-page (string-to-number (nth 1 items))))
+        (my-ensure 'org)
+        (my-focus-on-pdf-window-then-back
+         (lambda (pdf-file)
+           (when (string= (file-name-base pdf-file) (file-name-base pdf-file))
+             (my-pdf-view-goto-page pdf-page))))))))
 
-(when (and window-system (memq window-system '(mac ns)))
-  ;; @see https://github.com/purcell/exec-path-from-shell/issues/75
-  ;; I don't use those exec path anyway.
-  (my-run-with-idle-timer 4 #'exec-path-from-shell-initialize))
-;; }}
+(defun my-open-pdf-next-page (&optional n)
+  "Open pdf and go to next N page."
+  (interactive "p")
+  (my-focus-on-pdf-window-then-back
+   (lambda (pdf-file)
+     (pdf-view-next-page n))))
 
-(with-eval-after-load 'elec-pair
-  (setq electric-pair-inhibit-predicate 'my-electric-pair-inhibit))
+(defun my-open-pdf-previous-page (&optional n)
+  "Open pdf and go to next N page."
+  (interactive "p")
+  (my-focus-on-pdf-window-then-back
+   (lambda (pdf-file)
+     (pdf-view-previous-page n))))
 
-;; {{ markdown
-(defun markdown-mode-hook-setup ()
-  ;; Stolen from http://stackoverflow.com/a/26297700
-  ;; makes markdown tables saner via orgtbl-mode
-  ;; Insert org table and it will be automatically converted
-  ;; to markdown table
-  (my-ensure 'org-table)
-  (defun cleanup-org-tables ()
-    (save-excursion
-      (goto-char (point-min))
-      (while (search-forward "-+-" nil t) (replace-match "-|-"))))
-  (add-hook 'after-save-hook 'cleanup-org-tables nil 'make-it-local)
-  (orgtbl-mode 1) ; enable key bindings
-  ;; don't wrap lines because there is table in `markdown-mode'
-  (setq truncate-lines t))
-(add-hook 'markdown-mode-hook 'markdown-mode-hook-setup)
+(defun my-open-pdf-goto-page (&optional n)
+  "Open pdf and go to page N.
+Org node property PDF_PAGE_OFFSET is used to calculate physical page number."
+  (interactive "p")
+  (let* ((page-offset (org-entry-get (point) "PDF_PAGE_OFFSET")))
+    (setq page-offset (if page-offset (string-to-number page-offset) 0))
+    (unless n (setq n 1))
+    (setq n (+ n page-offset))
+    (my-focus-on-pdf-window-then-back
+     (lambda (pdf-file)
+       (pdf-view-goto-page n)))))
 ;; }}
 
 (provide 'init-misc)
