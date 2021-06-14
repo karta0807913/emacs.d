@@ -36,9 +36,9 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# chinese support
+# chinese support and sudo command
 RUN apt-get update && \
-    apt-get install -y language-pack-en language-pack-zh-hant language-selector-common && \
+    apt-get install -y language-pack-en language-pack-zh-hant language-selector-common sudo && \
     apt-get -y install $(check-language-support) && \
     rm -rf /var/lib/apt/lists/*
 
