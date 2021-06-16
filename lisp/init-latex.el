@@ -1,5 +1,3 @@
-
-
 (defun init-lsp-latex-mode ()
   (add-hook 'lsp-mode-hook (lambda ()
                              (setq tab-width 2)))
@@ -29,6 +27,16 @@
 (with-eval-after-load "tex-mode"
   (require 'lsp-latex)
   (add-hook 'tex-mode-hook 'init-lsp-latex-mode)
-  (add-hook 'latex-mode-hook 'init-lsp-latex-mode))
+  (add-hook 'latex-mode-hook 'init-lsp-latex-mode)
+  (general-create-definer latex-leader-def
+    :prefix ","
+    :states '(normal emacs)
+    :keymaps 'latex-mode-map)
+  (latex-leader-def
+   "op" (lambda ()
+          (interactive)
+          (message "start latex building")
+          (lsp-latex-build))
+   "fw" 'lsp-latex-forward-search))
 
 (provide 'init-latex)
