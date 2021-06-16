@@ -1,4 +1,3 @@
-(add-to-list 'auto-mode-alist '("\\.go\\'" . go-mode))
 (defun lsp-go-install-save-hooks ()
   (add-hook 'before-save-hook #'lsp-format-buffer t t)
   (add-hook 'before-save-hook #'lsp-organize-imports t t))
@@ -17,5 +16,6 @@
 (add-hook 'go-mode-hook #'lsp-deferred)
 (add-hook 'go-mode-hook #'lsp-go-install-save-hooks)
 (add-hook 'go-mode-hook #'yas-minor-mode)
+(add-hook 'go-mode-hook (lambda () (setq compile-command "go test ./...")))
 
 (provide 'init-go)

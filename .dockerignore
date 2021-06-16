@@ -70,3 +70,5 @@ package-quickstart.el
 docker
 Dockerfile
 .dockerignore
+.git
+.gitignore
