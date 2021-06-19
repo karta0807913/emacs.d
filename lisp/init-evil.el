@@ -333,7 +333,13 @@ If the character before and after CH is space or tab, CH is NOT slash"
   :type exclusive
   (let* ((string (evil-find-symbol t))
          (search (format "\\_<%s\\_>" (regexp-quote string)))
+         (project-root (or (lsp-workspace-root) "global"))
          ientry ipos)
+    (if (not (gethash project-root xref-marker-ring-hash))
+        (puthash project-root (make-ring xref-marker-ring-length) xref-marker-ring-hash))
+    (make-local-variable 'xref--marker-ring)
+    (setq xref--marker-ring (gethash project-root xref-marker-ring-hash))
+
     ;; load imenu if available
     (my-ensure 'imenu)
 
@@ -350,7 +356,10 @@ If the character before and after CH is space or tab, CH is NOT slash"
         (js2-jump-to-definition))
        (t (evil-goto-definition))
        )
-      )))
+      )
+    (make-local-variable 'xref--marker-ring)
+    (setq xref--marker-ring (gethash project-root xref-marker-ring-hash))
+    ))
 (define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
 
 ;; I learn this trick from ReneFroger, need latest expand-region

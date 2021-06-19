@@ -108,7 +108,9 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
 (add-hook 'js2-mode-hook 'my-js2-mode-setup)
 (add-hook 'rjsx-mode-hook (lambda ()
                             (setq evil-shift-width 2)
+                            (make-variable-buffer-local 'js-indent-level)
                             (setq js-indent-level 2)
+                            (make-variable-buffer-local 'javascript-indent-level)
                             (setq javascript-indent-level 2)))
 
 ;; @see https://github.com/felipeochoa/rjsx-mode/issues/33
