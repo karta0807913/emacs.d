@@ -138,6 +138,6 @@
 (my-add-auto-mode 'dart-mode "\\.dart$")
 
 ;; go mode
-(my-add-auto-mode 'go-mode "\\.dart$")
+(my-add-auto-mode 'go-mode "\\.go")
 
 (provide 'init-file-type)
