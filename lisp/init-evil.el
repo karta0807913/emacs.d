@@ -324,6 +324,9 @@ If the character before and after CH is space or tab, CH is NOT slash"
     (forward-line 1)
     (evil-search search t t (point))))
 
+(setq xref-marker-ring-hash (make-hash-table))
+(puthash "global" xref--marker-ring xref-marker-ring-hash)
+
 ;; "gd" or `evil-goto-definition' now use `imenu', `xref' first,
 ;; BEFORE searching string from `point-min'.
 ;; xref part is annoying because I already use `counsel-etags' to search tag.
