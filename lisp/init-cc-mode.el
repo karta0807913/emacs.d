@@ -42,12 +42,12 @@
 
   (setq cc-search-directories '("." "/usr/include" "/usr/local/include/*" "../*/include" "$WXWIN/include"))
 
-  ;; {{ @see https://github.com/redguardtoo/cpputils-cmake
+  ;; @see https://github.com/redguardtoo/cpputils-cmake
   ;; In theory, you can write your own Makefile for `flymake-mode' without cmake.
   ;; Nobody actually does it in real world.
 
-  ;; debugging Emacs c code
-  (add-to-list 'imenu-generic-expression '(nil "^DEFUN *(\"\\([a-zA-Z0-9-]+\\)" 1))
+  ;; debugging Emacs C code
+  (push '(nil "^DEFUN *(\"\\([a-zA-Z0-9-]+\\)" 1) imenu-generic-expression )
 
   ;; make a #define be left-aligned
   (setq c-electric-pound-behavior (quote (alignleft))))
@@ -68,19 +68,11 @@ AllowShortFunctionsOnASingleLine: Empty")
 
 ;; donot use c-mode-common-hook or cc-mode-hook because many major-modes use this hook
 (defun c-mode-common-hook-setup ()
+  "C/C++ setup."
   (unless (is-buffer-file-temp)
     (my-common-cc-mode-setup)
     (unless (or (derived-mode-p 'java-mode) (derived-mode-p 'groovy-mode))
-      (my-c-mode-setup))
-
-    ;; gtags (GNU global) stuff
-    (when (and (executable-find "global")
-               ;; `man global' to figure out why
-               (not (string-match-p "GTAGS not found"
-                                    (shell-command-to-string "global -p"))))
-      ;; emacs 24.4+ will set up eldoc automatically.
-      ;; so below code is NOT needed.
-      (eldoc-mode 1)))
+      (my-c-mode-setup)))
   (setq lsp-clients-clangd-args '("--fallback-style=./.clang-config"))
   (add-hook 'lsp-mode-hook 'clangd-lsp-write-default-settings)
   (flycheck-mode 1)

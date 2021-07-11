@@ -140,9 +140,6 @@
     regex-tool
     legalese
     htmlize
-    pyim-basedict
-    pyim-wbdict
-    pyim
     scratch
     session
     inflections
