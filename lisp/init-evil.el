@@ -324,7 +324,7 @@ If the character before and after CH is space or tab, CH is NOT slash"
     (forward-line 1)
     (evil-search search t t (point))))
 
-(setq xref-marker-ring-hash (make-hash-table))
+(setq xref-marker-ring-hash (make-hash-table :test 'equal))
 (puthash "global" (make-ring 5) xref-marker-ring-hash)
 
 ;; "gd" or `evil-goto-definition' now use `imenu', `xref' first,
@@ -336,6 +336,7 @@ If the character before and after CH is space or tab, CH is NOT slash"
   :type exclusive
   (let* ((string (evil-find-symbol t))
          (search (format "\\_<%s\\_>" (regexp-quote string)))
+         (get-project-root (lambda () (or (lsp-workspace-root) "global")))
          (project-root (or (lsp-workspace-root) "global"))
          ientry ipos)
     (if (not (gethash project-root xref-marker-ring-hash))
@@ -362,6 +363,9 @@ If the character before and after CH is space or tab, CH is NOT slash"
       )
     (make-local-variable 'xref--marker-ring)
     (setq xref--marker-ring (gethash project-root xref-marker-ring-hash))
+    (message (funcall get-project-root))
+    (if (not (eq project-root (funcall get-project-root)))
+        (puthash (funcall get-project-root) xref--marker-ring xref-marker-ring-hash))
     ))
 (define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
 
