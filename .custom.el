@@ -13,8 +13,13 @@
 (setq neo-window-width 35)
 (set-language-environment "UTF-8")
 ;; (setq counsel-etags-debug t)
+
+;; latex pdf viewer setting
 (setq lsp-latex-forward-search-executable "zathura")
 (setq lsp-latex-forward-search-args '("--synctex-forward" "%l:1:%f" "%p"))
+
+;; treat "_" with words
+(modify-syntax-entry ?_ "w")
 
 (defun eshell/clear ()
   "clear eshell buffer"
@@ -26,32 +31,9 @@
         (let ((eshell-buffer-maximum-lines 0))
           (eshell-truncate-buffer))))))
 
-(defun copy-region-to-xserver ()
-  "copy current region to xcclb"
-  (interactive)
-  (let ((xclip (executable-find "xclip")))
-    (if (= (length xclip) 0)
-        (message "can't find xclip, copy failed")
-      (let (
-            (process (start-process "xclip" "xclip" xclip "-selection" "clipboard"))
-            (start-point (if (use-region-p)
-                             (region-beginning)
-                           (point-min)))
-            (end-point (if (use-region-p)
-                           (region-end)
-                         (point-max)))
-            )
-        (process-send-region process start-point end-point)
-        ;; (process-send-string process
-        ;;                      (buffer-substring start-point end-point))
-        ;; (process-send-eof process)
-        (deactivate-mark)
-        (message (format "copy start at %d, end at %d" start-point end-point))
-        ))))
-
-(require 'request)
 (defun markdown-live-preview-buffer ()
   (interactive)
+  (require 'request)
   (let ((data (buffer-string)))
     (request
      "https://api.github.com/markdown"
@@ -79,130 +61,3 @@
                (message "Got error: %S" error-thrown))))
     )
   )
-(defun latex-beamer-formula-frame ()
-  (interactive)
-  (let ((frametitle (read-from-minibuffer "Frame Title:")))
-    (insert (format "%%---------------------------------------------------------
-\\begin{frame}
-  \\frametitle{%s}
-  \\begin{columns}[T]
-    \\begin{column}{.5\\textwidth}
-      \\begin{itemize}
-      \\end{itemize}
-    \\end{column}
-    \\begin{column}{.5\\textwidth}
-      \\begin{itemize}
-      \\end{itemize}
-    \\end{column}
-  \\end{columns}
-  \\vfill
-  \\begin{align*} \\end{align*}
-\\end{frame}
-%%---------------------------------------------------------" frametitle))))
-
-;;
-;; (message test_buffer)
-;; (message test_process)
-;; (buffer-substring 1, 10)
-;; (print test_process)
-;; (print test_buffer)
-;; (with-current-buffer test_buffer
-;;  ;; (buffer-name)
-;;   ;; (buffer-file-name)
-;;   ;; (buffer-substring 1 (point-max))
-;;   (buffer-string)
-;;   ;; (erase-buffer)
-;;   )
-;; (buffer-file-name)
-;; (buffer-substring 1 10)
-;; (buffer-string)
-;; (setq test_process (open-network-stream "test stream" test_buffer "127.0.0.1" 9000 "plain"))
-;; (setq test_buffer (wsc--create-data-buffer))
-;; (setq test_buffer (get-buffer-create " wsc "))
-;; (setq test_process (open-network-stream "test stream" test_buffer "127.0.0.1" 9229 "plain"))
-;; (setq log_buffer (get-buffer-create " log "))
-;; (setq http_get_header (concat "GET / HTTP/1.1\r\n"
-;;                                 "HOST 127.0.0.1:9000 \r\n"
-;;                                 "\r\n"))
-;; (defvar wsc--handshake-template (concat
-;;                                "GET %s HTTP/1.1\n"
-;; 				               "Host: %s\n"
-;; 				               "Upgrade: websocket\n"
-;; 				               "Connection: Upgrade\n"
-;; 				               "Sec-WebSocket-Key: %s\n"
-;; 				               "Sec-WebSocket-Version: %s\n\n"))
-
-;; (defvar _wsc--handshake-template (concat
-;;                                "GET %s HTTP/1.1\n"
-;; 				               "Host: %s\n"
-;; 				               "Upgrade: websocket\n"
-;; 				               "Connection: Upgrade\n"
-;; 				               "Sec-WebSocket-Key: %s\n"
-				               ;; "Sec-WebSocket-Version: %s\n\n"))
-;; (process-send-string test_process http_get_header)
-;; (process-send-string test_process (format wsc--handshake-template "/e08ad0be-32a2-4d57-a6bd-ebde200b2cd8" "127.0.0.1:9229" "AAAATFUHS" "13" ))
-;; (with-current-buffer test_buffer
-;;  ;; (buffer-name)
-;;   ;; (buffer-file-name)
-;;   ;; (buffer-substring 1 (point-max))
-;;   (buffer-string)
-;;   ;; (erase-buffer)
-;;   )
-;; (with-current-buffer log_buffer
-;;   (buffer-string)
-;;   )
-;; (with-current-buffer log_buffer
-;;   (erase-buffer)
-;;   )
-;; (with-current-buffer test_buffer
-;;   (erase-buffer)
-;;   )
-;; (delete-process test_process)
-
-;; (defun wsc--open-handshake (connection)
-;;   "Open a handshake for CONNECTION."
-;;   (let* ((process (wsc-connection-process connection))
-;; 	 (url (wsc-connection-url connection))
-;; 	 (absolute-path (if (string-empty-p (url-filename url))
-;; 			    "/"
-;; 			  (url-filename url)))
-;; 	 (host-and-port (if (url-port-if-non-default url)
-;; 			    (format "%s:%s" (url-host url) (url-port url))
-;; 			  (url-host url))))
-;;     (process-send-string process (format _wsc--handshake-template
-;; 					 absolute-path
-;; 					 host-and-port
-;; 					 (wsc-connection-key connection)
-					 ;; wsc-protocol-version))))
-;; (defun wsc--make-process (url)
-;;   "Open a TCP connection to URL, and return the process object."
-;;   (let* ((use-tls (string= (url-type url) "wss"))
-;; 	 (type (if use-tls 'tls 'plain))
-;; 	 (host (url-host url))
-;; 	 (port (if (zerop (url-port url))
-;; 		   (if use-tls 443 80)
-;; 		 (url-port url)))
-;; 	 (name "wsc process")
-;; 	 (buf (wsc--create-data-buffer)))
-;;     (with-current-buffer (get-buffer-create " log ")
-;;       (goto-char (point-max))
-;;       (insert (format "%s:%s\n%s\n\n" host port type)))
-;;     (open-network-stream "test stream" test_buffer "127.0.0.1" 9229 "plain")))
-
-;; (defun wsc--open-handshake (connection)
-;;   "Open a handshake for CONNECTION."
-;;   (let* ((process (wsc-connection-process connection))
-;; 	 (url (wsc-connection-url connection))
-;; 	 (absolute-path (if (string-empty-p (url-filename url))
-;; 			    "/"
-;; 			  (url-filename url)))
-;; 	 (host-and-port (if (url-port-if-non-default url)
-;; 			    (format "%s:%s" (url-host url) (url-port url))
-;; 			  (url-host url))))
-;;     (process-send-string process (format wsc--handshake-template "/b65e221d-a310-4d11-a868-554854d6e1b3" "127.0.0.1:9229" "AAAATFUHS" "13" ))))
-
-;; (with-current-buffer test_buffer
-;;   (goto-char (point-max))
-;;   (insert wsc--handshake-template))
-
-;; (wsc--make-process '(:type "ws" :user nil :password nil :host "127.0.0.1" :portspec 9229 :filename "/b65e221d-a310-4d11-a868-554854d6e1b3/6f693b9e-3262-49fc-9a97-e3e086715ad8" :target nil :attributes nil :fullness t :silent nil :use-cookies t :asynchronous t) test_buffer)
