@@ -18,6 +18,8 @@
               js2-bounce-indent-p t)
 
 (with-eval-after-load 'js-mode
+  ;; allow underscore is a part of words
+  (modify-syntax-entry ?_ "w")
   ;; '$' is part of variable name like '$item'
   (modify-syntax-entry ?$ "w" js-mode-syntax-table))
 
@@ -93,6 +95,9 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
 (defun my-js2-mode-setup()
   "Set up javascript."
   (unless (is-buffer-file-temp)
+    ;; allow underscore is a part of words
+    (modify-syntax-entry ?_ "w")
+    ;; setup language server
     (setup-lsp-mode)
     ;; if use node.js we need nice output
     (js2-imenu-extras-mode)
@@ -112,40 +117,6 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
                             (setq js-indent-level 2)
                             (make-variable-buffer-local 'javascript-indent-level)
                             (setq javascript-indent-level 2)))
-
-;; @see https://github.com/felipeochoa/rjsx-mode/issues/33
-(with-eval-after-load 'rjsx-mode
-  (define-key rjsx-mode-map "<" nil))
-
-;; {{ js-beautify
-(defun my-js-beautify (&optional indent-size)
-  "Beautify selected region or whole buffer with js-beautify.
-INDENT-SIZE decide the indentation level.
-`sudo pip install jsbeautifier` to install js-beautify.'"
-  (interactive "P")
-  (let* ((executable (if (executable-find "js-beautify") "js-beautify"
-                       "jsbeautify")))
-    ;; detect indentation level
-    (unless indent-size
-      (setq indent-size
-            (cond
-             ((memq major-mode '(js-mode javascript-mode))
-              js-indent-size)
-
-             ((memq major-mode '(web-mode))
-              web-mode-code-indent-offset)
-
-             ((memq major-mode '(typescript-mode))
-              typescript-indent-size)
-
-             (t
-              2))))
-    ;; do it!
-    (run-cmd-and-replace-region (concat executable
-                                        " --stdin "
-                                        " --jslint-happy --brace-style=end-expand --keep-array-indentation "
-                                        (format " --indent-size=%d " indent-size)))))
-;; }}
 
 ;; {{ js-comint
 (defun my-js-clear-send-buffer ()
@@ -232,6 +203,8 @@ INDENT-SIZE decide the indentation level.
 ;; {{ typescript
 (defun typescript-mode-hook-setup ()
   "Set up `typescript-mode'."
+  ;; allow underscore is a part of words
+  (modify-syntax-entry ?_ "w")
   (when (my-use-tags-as-imenu-function-p)
     ;; use ctags to calculate imenu items
     (setq imenu-create-index-function

@@ -15,6 +15,7 @@
   ;; http://emacs.stackexchange.com/questions/3322/python-auto-indent-problem/3338#3338
   ;; emacs 24.4+
   (setq elpy-rpc-python-command "python3")
+  (modify-syntax-entry ?_ "w")
   (setq electric-indent-chars (delq ?: electric-indent-chars)))
 
 (provide 'init-python)
