@@ -49,10 +49,10 @@ COPY .custom.el .
 
 RUN emacs --script .emacs.d/init.el && chmod 777 . .emacs.d
 
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin:/usr/local/go/bin
-ENV TERM=xterm-256color
-ENV HOME=/home/code
+ENV PATH $PATH:/go/bin:/usr/local/go/bin
+ENV TERM xterm-256color
+ENV HOME /home/code
 
-ENV LANG=C.UTF-8
+ENV LANG C.UTF-8
 
 CMD [ "emacs", "-nw" ]
