@@ -18,6 +18,9 @@
 (setq lsp-latex-forward-search-executable "zathura")
 (setq lsp-latex-forward-search-args '("--synctex-forward" "%l:1:%f" "%p"))
 
+;; https://github.com/syl20bnr/evil-escape
+(setq evil-escape-key-sequence "qq")
+
 ;; treat "_" with words
 (modify-syntax-entry ?_ "w")
 
