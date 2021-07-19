@@ -331,7 +331,7 @@ If the character before and after CH is space or tab, CH is NOT slash"
 ;; BEFORE searching string from `point-min'.
 ;; xref part is annoying because I already use `counsel-etags' to search tag.
 (evil-define-motion my-evil-goto-definition ()
-  "Go to definition or first occurrence of symbol under point in current buffer."
+  "Go to local definition or first occurrence of symbol under point in current buffer."
   :jump t
   :type exclusive
   (let* ((string (evil-find-symbol t))
@@ -350,6 +350,10 @@ If the character before and after CH is space or tab, CH is NOT slash"
     (if (null string)
         (user-error "No symbol under cursor")
       (setq isearch-forward t)
+
+      (my-ensure 'counsel-etags)
+      (counsel-etags-push-marker-stack)
+
       ;; if imenu is available, try it
       (cond
        ((bound-and-true-p lsp-mode)
@@ -368,6 +372,9 @@ If the character before and after CH is space or tab, CH is NOT slash"
         (puthash (funcall get-project-root) xref--marker-ring xref-marker-ring-hash))
     ))
 (define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
+
+;; Use below line to restore old vim "gd"
+;; (define-key evil-normal-state-map "gd" 'my-evil-goto-definition)
 
 ;; I learn this trick from ReneFroger, need latest expand-region
 ;; @see https://github.com/redguardtoo/evil-matchit/issues/38
@@ -958,7 +965,7 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   ;; evil re-assign "M-." to `evil-repeat-pop-next' which I don't use actually.
   ;; Restore "M-." to original binding command
   (define-key evil-normal-state-map (kbd "M-.") 'xref-find-definitions)
-  (setq expand-region-contract-fast-key "char")
+  (setq expand-region-contract-fast-key "z")
   ;; @see https://bitbucket.org/lyro/evil/issue/360/possible-evil-search-symbol-forward
   ;; evil 1.0.8 search word instead of symbol
   (setq evil-symbol-word-search t)
