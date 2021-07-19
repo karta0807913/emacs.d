@@ -122,6 +122,7 @@
   (require-init 'init-go)
   (require-init 'init-latex)
   (require-init 'init-dart)
+  (require-init 'init-java)
 
   ;; projectile costs 7% startup time
 

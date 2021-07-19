@@ -48,6 +48,8 @@
                                        (format "-DarchetypeArtifactId=%s" template)
                                        (format "-DarchetypeVersion=%s" version)
                                        "-DinteractiveMode=false") 'comint-output-filter)
+    (with-current-buffer mvnw-buffer-name
+                         (comint-mode))
     (display-buffer mvnw-buffer-name)))
 
 
