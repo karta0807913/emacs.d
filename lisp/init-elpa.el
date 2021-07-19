@@ -71,8 +71,7 @@
     highlight-symbol
     undo-fu
     command-log-mode
-    evil ; @see https://github.com/emacs-evil/evil/commit/19cc5f8eef8bfffdec8082b604c7129782acb332
-    ;; lsp-mode ; stable version has performance issue, but unstable version sends too many warnings
+    evil
     vimrc-mode
     rjsx-mode ; fixed the indent issue in jsx
     package-lint ; for melpa pull request only
@@ -153,11 +152,12 @@
     workgroups2
     zoutline
     company-c-headers
-    lsp-latex
     company-statistics
     dap-mode
     lsp-mode
     lsp-dart
+    lsp-latex
+    lsp-java
     dart-mode)
   "Packages to install from melpa-unstable.")
 
@@ -335,7 +335,6 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'company-native-complete)
 (require-package 'company-c-headers)
 (require-package 'company-statistics)
-(require-package 'lsp-mode)
 (require-package 'elpy)
 (require-package 'legalese)
 (require-package 'simple-httpd)
@@ -377,11 +376,13 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'pdf-tools)
 (require-package 'pyim)
 (require-package 'pyim-wbdict) ; someone may use wubi IME, not me
-(require-package 'lsp-latex)
 (require-package 'pyim-basedict)
 (require-package 'esup)
 (require-package 'dart-mode)
+(require-package 'lsp-mode)
+(require-package 'lsp-latex)
 (require-package 'lsp-dart)
+(require-package 'lsp-java)
 
 ;; {{ Fixed expiring GNU ELPA keys
 ;; GNU ELPA GPG key will expire on Sep-2019. So we need install this package to

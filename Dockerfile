@@ -53,6 +53,6 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin:/u
 ENV TERM=xterm-256color
 ENV HOME=/home/code
 
-ENV LANG=en_US.UTF-8
+ENV LANG=C.UTF-8
 
 CMD [ "emacs", "-nw" ]
