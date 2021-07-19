@@ -101,9 +101,6 @@
 (autoload 'rjsx-mode "rjsx-mode" nil t)
 (autoload 'go-mode "go-mode" nil t)
 (autoload 'dart-mode "dart-mode" nil t)
-(autoload 'lsp-latex "lsp-latex")
-(autoload 'lsp-dart "lsp-dart")
-(autoload 'lsp-java "lsp-java")
 (autoload 'global-git-gutter-mode "git-gutter" "" t)
 
 (provide 'init-autoload)

@@ -16,7 +16,6 @@
           (message "start java building")
           (lsp-java-build-project)))
   (flycheck-mode +1)
-  (lsp-java)
   (lsp))
 
 ;; mvn archetype:generate -DgroupId=com.mycompany.app -DartifactId=my-app -DarchetypeArtifactId=maven-archetype-quickstart -DarchetypeVersion=1.4 -DinteractiveMode=false
@@ -53,5 +52,5 @@
     (display-buffer mvnw-buffer-name)))
 
 
-(add-hook 'java-mode-hook '(lsp-java-init))
+(add-hook 'java-mode-hook 'lsp-java-init)
 (provide 'init-java)

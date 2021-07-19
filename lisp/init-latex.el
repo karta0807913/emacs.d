@@ -25,7 +25,6 @@
   (lsp))
 
 (with-eval-after-load "tex-mode"
-  (require 'lsp-latex)
   (add-hook 'tex-mode-hook 'init-lsp-latex-mode)
   (add-hook 'latex-mode-hook 'init-lsp-latex-mode)
   (general-create-definer latex-leader-def
