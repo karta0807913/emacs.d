@@ -351,9 +351,6 @@ If the character before and after CH is space or tab, CH is NOT slash"
         (user-error "No symbol under cursor")
       (setq isearch-forward t)
 
-      (my-ensure 'counsel-etags)
-      (counsel-etags-push-marker-stack)
-
       ;; if imenu is available, try it
       (cond
        ((bound-and-true-p lsp-mode)
@@ -371,10 +368,8 @@ If the character before and after CH is space or tab, CH is NOT slash"
     (if (not (eq project-root (funcall get-project-root)))
         (puthash (funcall get-project-root) xref--marker-ring xref-marker-ring-hash))
     ))
-(define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
 
-;; Use below line to restore old vim "gd"
-;; (define-key evil-normal-state-map "gd" 'my-evil-goto-definition)
+(define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
 
 ;; I learn this trick from ReneFroger, need latest expand-region
 ;; @see https://github.com/redguardtoo/evil-matchit/issues/38

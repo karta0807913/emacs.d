@@ -15,7 +15,7 @@ RUN apt-get update && \
 RUN wget "https://github.com/latex-lsp/texlab/releases/download/v2.2.2/texlab-x86_64-linux.tar.gz" -O texlab.tar.gz && tar -xf texlab.tar.gz && mv texlab /usr/bin && rm -f texlab.tar.gz
 
 # nodejs 14 and theia-ide
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && apt-get update && apt-get install -y nodejs && npm i -g typescript-language-server; npm i -g typescript && rm -rf /var/lib/apt/lists/*
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash - && apt-get update && apt-get install -y nodejs && npm i -g typescript-language-server && npm i -g typescript && rm -rf /var/lib/apt/lists/*
 
 ENV GOPATH="/go"
 
