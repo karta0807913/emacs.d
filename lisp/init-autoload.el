@@ -99,6 +99,7 @@
 (autoload 'dropdown-list "dropdown-list" "")
 (autoload 'magit-commit-popup "magit" "")
 (autoload 'rjsx-mode "rjsx-mode" nil t)
+(autoload 'lsp-ui-mode "lsp-ui" nil t)
 (autoload 'go-mode "go-mode" nil t)
 (autoload 'dart-mode "dart-mode" nil t)
 (autoload 'global-git-gutter-mode "git-gutter" "" t)

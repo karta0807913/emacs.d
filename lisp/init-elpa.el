@@ -155,6 +155,7 @@
     company-statistics
     dap-mode
     lsp-mode
+    lsp-ui
     lsp-dart
     lsp-latex
     lsp-java
@@ -379,6 +380,7 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 (require-package 'pyim-basedict)
 (require-package 'esup)
 (require-package 'dart-mode)
+(require-package 'lsp-ui)
 (require-package 'lsp-mode)
 (require-package 'lsp-latex)
 (require-package 'lsp-dart)
