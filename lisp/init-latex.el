@@ -21,6 +21,7 @@
   (when (or (not (fboundp 'server-running-p)) (not (server-running-p)))
     (server-start))
 
+  (require 'lsp-latex)
   (electric-pair-mode +1)
   (lsp))
 

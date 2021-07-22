@@ -1,6 +1,6 @@
 FROM my_editor:base
 
-RUN sed -i 's/archive/tw.archive/' /etc/apt/sources.list && \
+RUN sed -i 's/archive\.ubunutu\.com/tw.archive.ubuntu.com/' /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y texlive-full zathura && \
     rm -rf /var/lib/apt/lists/*
