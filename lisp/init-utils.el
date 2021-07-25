@@ -13,6 +13,13 @@
              (format "%s/%s/%s" my-site-lisp-dir pkg pkg))))
           t t)))
 
+(defun my-get-project-root-directory ()
+  (cond ((fboundp 'lsp-workspace-root)
+         (lsp-workspace-root))
+        ((fboundp 'ffip-get-project-root-directory)
+         (file-truename (ffip-get-project-root-directory)))
+        nil))
+
 (defun my-ensure (feature)
   "Make sure FEATURE is required."
   (unless (featurep feature)

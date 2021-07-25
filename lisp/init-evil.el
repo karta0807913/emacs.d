@@ -336,8 +336,7 @@ If the character before and after CH is space or tab, CH is NOT slash"
   :type exclusive
   (let* ((string (evil-find-symbol t))
          (search (format "\\_<%s\\_>" (regexp-quote string)))
-         (get-project-root (lambda () (or (lsp-workspace-root) "global")))
-         (project-root (or (lsp-workspace-root) "global"))
+         (project-root (my-get-project-root-directory))
          ientry ipos)
     (if (not (gethash project-root xref-marker-ring-hash))
         (puthash project-root (make-ring xref-marker-ring-length) xref-marker-ring-hash))
@@ -364,10 +363,9 @@ If the character before and after CH is space or tab, CH is NOT slash"
       )
     (make-local-variable 'xref--marker-ring)
     (setq xref--marker-ring (gethash project-root xref-marker-ring-hash))
-    (message (funcall get-project-root))
-    (if (not (eq project-root (funcall get-project-root)))
-        (puthash (funcall get-project-root) xref--marker-ring xref-marker-ring-hash))
-    ))
+    (message (my-get-project-root-directory))
+    (if (not (eq project-root (my-get-project-root-directory)))
+        (puthash (my-get-project-root-directory) xref--marker-ring xref-marker-ring-hash))))
 
 (define-key evil-motion-state-map "gd" 'my-evil-goto-definition)
 
@@ -662,6 +660,7 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "tm" 'my-git-timemachine
   ;; toggle overview,  @see http://emacs.wordpress.com/2007/01/16/quick-and-dirty-code-folding/
   "ntd" 'neotree-project-dir
+  "cd" 'treemacs-show-project-root
   "op" 'my-compile
   "c$" 'org-archive-subtree ; `C-c $'
   ;; org-do-demote/org-do-premote support selected region
