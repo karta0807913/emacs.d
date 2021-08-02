@@ -14,7 +14,9 @@
           t t)))
 
 (defun my-get-project-root-directory ()
-  (cond ((fboundp 'lsp-workspace-root)
+  (cond ((not (buffer-file-name))
+         nil)
+        ((and (fboundp 'lsp-workspace-root) (lsp-workspace-root))
          (lsp-workspace-root))
         ((fboundp 'ffip-get-project-root-directory)
          (file-truename (ffip-get-project-root-directory)))

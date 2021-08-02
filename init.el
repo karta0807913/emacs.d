@@ -124,6 +124,7 @@
   (require-init 'init-dart)
   (require-init 'init-java)
   (require-init 'init-sidebar)
+  (require-init 'init-dap)
 
   ;; projectile costs 7% startup time
 

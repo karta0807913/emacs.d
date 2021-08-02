@@ -324,8 +324,9 @@ If the character before and after CH is space or tab, CH is NOT slash"
     (forward-line 1)
     (evil-search search t t (point))))
 
+(require 'xref)
 (setq xref-marker-ring-hash (make-hash-table :test 'equal))
-(puthash "global" (make-ring 5) xref-marker-ring-hash)
+(puthash "global" (make-ring xref-marker-ring-length) xref-marker-ring-hash)
 
 ;; "gd" or `evil-goto-definition' now use `imenu', `xref' first,
 ;; BEFORE searching string from `point-min'.
@@ -354,13 +355,8 @@ If the character before and after CH is space or tab, CH is NOT slash"
       (cond
        ((bound-and-true-p lsp-mode)
         (lsp-find-definition))
-       ((bound-and-true-p tide-mode)
-        (tide-jump-to-definition))
-       ((bound-and-true-p js2-mode)
-        (js2-jump-to-definition))
-       (t (evil-goto-definition))
-       )
-      )
+       (t (evil-goto-definition))))
+
     (make-local-variable 'xref--marker-ring)
     (setq xref--marker-ring (gethash project-root xref-marker-ring-hash))
     (message (my-get-project-root-directory))
@@ -671,11 +667,11 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "cxo" 'org-clock-out ; `C-c C-x C-o'
   "cxr" 'org-clock-report ; `C-c C-x C-r'
   "qq" 'my-multi-purpose-grep
-  "dd" 'counsel-etags-grep-current-directory
   "rr" 'my-counsel-recentf
-  "da" 'diff-region-tag-selected-as-a
-  "db" 'diff-region-compare-with-b
-  "di" 'evilmi-delete-items
+  "dd" 'dap-breakpoint-delete
+  "da" 'dap-breakpoint-add
+  "dn" 'dap-next
+  "dc" 'dap-continue
   "si" 'evilmi-select-items
   "jb" 'my-beautfiy-code
   "jp" 'my-print-json-path
