@@ -72,3 +72,5 @@ Dockerfile
 .dockerignore
 .git
 .gitignore
+.cache
+.dap-breakpoints
