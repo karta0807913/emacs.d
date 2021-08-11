@@ -1,3 +1,6 @@
+(defvar init-sidebar-previous-window nil
+  "A variable store treemacs should open in which window.")
+
 (defun treemacs-custom-setup ()
   (defun treemacs-visit-node-vsplit (&optional arg)
     "Open current file or tag by vertically splitting `next-window'.
@@ -10,6 +13,7 @@ Stay in current window with a prefix argument ARG."
      :tag-section-action (treemacs--visit-or-expand/collapse-tag-node btn arg nil)
      :tag-action (treemacs--goto-tag btn)
      :save-window arg
+     :window  (or init-sidebar-previous-window (previous-window))
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
 
   (defun treemacs-visit-node-split (&optional arg)
@@ -23,6 +27,7 @@ Stay in current window with a prefix argument ARG."
      :tag-section-action (treemacs--visit-or-expand/collapse-tag-node btn arg nil)
      :tag-action (treemacs--goto-tag btn)
      :save-window arg
+     :window  (or init-sidebar-previous-window (previous-window))
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
 
   (defun treemacs-visit-node-no-split (&optional arg)
@@ -37,7 +42,7 @@ Stay in current window with a prefix argument ARG."
      :tag-action (treemacs--goto-tag btn)
      :save-window arg
      :ensure-window-split t
-     :window  (previous-window)
+     :window  (or init-sidebar-previous-window (previous-window))
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
   (define-key treemacs-mode-map "j" 'treemacs-next-line)
   (define-key treemacs-mode-map "k" 'treemacs-previous-line)
@@ -51,13 +56,15 @@ Stay in current window with a prefix argument ARG."
   (define-key treemacs-mode-map "h" 'treemacs-collapse-parent-node)
   (define-key treemacs-mode-map "l" 'treemacs-RET-action)
   (define-key treemacs-mode-map (kbd "M-h") 'treemacs-root-up)
-  (define-key treemacs-mode-map (kbd "M-l") 'treemacs-root-down))
+  (define-key treemacs-mode-map (kbd "M-l") 'treemacs-root-down)
+  (define-key treemacs-mode-map (kbd "RET") 'treemacs-visit-node-no-split))
 
 (add-hook 'treemacs-mode-hook 'treemacs-custom-setup)
 
 (defun treemacs-show-project-root ()
   (interactive)
   (require 'treemacs)
+  (setq init-sidebar-previous-window (get-buffer-window))
   (let ((project-root (my-get-project-root-directory))
         (file-name (buffer-file-name (current-buffer))))
     (if (or (not file-name) (not project-root))
