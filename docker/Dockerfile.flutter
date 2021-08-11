@@ -1,4 +1,4 @@
-FROM my_editor:base
+FROM localhost/my_editor:base
 
 ENV DEBIAN_FRONTEND=noninteractive
 

@@ -1,6 +1,6 @@
 FROM openjdk:18 as java
 
-FROM my_editor:base
+FROM localhost/my_editor:base
 
 ENV JAVA_HOME /usr/java/openjdk-18
 ENV PATH $JAVA_HOME/bin:$PATH
