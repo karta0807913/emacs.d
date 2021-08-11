@@ -4,8 +4,6 @@
 ;;
 ;; Author: Tommy Xiang <tommyx058@gmail.com>
 ;; Keywords: convenience
-;; Package-Version: 20210310.2247
-;; Package-Commit: 98e9e8b38b6ca289fbe265b0a7b62c7fe38ed0e2
 ;; Version: 0.0.1
 ;; URL: https://github.com/TommyX12/company-tabnine/
 ;; Package-Requires: ((emacs "25") (company "0.9.3") (cl-lib "0.5") (dash "2.16.0") (s "1.12.0") (unicode-escape "1.1"))
@@ -147,11 +145,6 @@ Any successful completion will reset the consecutive count."
   :group 'company-tabnine
   :type 'integer)
 
-(defcustom company-tabnine-wait 0.25
-  "Number of seconds to wait for TabNine to respond."
-  :group 'company-tabnine
-  :type 'float)
-
 (defcustom company-tabnine-always-trigger t
   "Whether to overload company's minimum prefix length.
 This allows completion to trigger on as much as possible.
@@ -190,10 +183,21 @@ Only useful on GNU/Linux.  Automatically set if NixOS is detected."
   :group 'company-tabnine
   :type 'boolean)
 
-;; (defcustom company-tabnine-async t
-company-tabnine--post-completion;;   "Whether or not to use async operations to fetch data."
-;;   :group 'company-tabnine
-;;   :type 'boolean)
+(defcustom company-tabnine-async t
+  "Whether or not to use async operations to fetch data."
+  :group 'company-tabnine
+  :type 'boolean)
+
+(defcustom company-tabnine-wait 0.25
+  "Number of seconds to wait for TabNine to respond.
+Only if company-tabnine-async is nil"
+  :group 'company-tabnine
+  :type 'float)
+
+(defcustom company-tabnine-max-request-buffer 10
+  "Maximum number of simultaneous requests at a time in async mode"
+  :group 'company-tabnine
+  :type 'integer)
 
 (defcustom company-tabnine-show-annotation t
   "Whether to show an annotation inline with the candidate."
@@ -243,7 +247,16 @@ Resets every time successful completion is returned.")
   "A list store request cursor points.")
 
 (defvar company-tabnine--response-cache '()
-  "A list which contains a plist, ex: '(:old_prefix \"pre\" :candidate \"prefix\" :detail \"13%\")")
+  "A list which contains a plist.
+contains of '(
+    :point \"1441\" ;; start point of completion
+    :candidate \"prefix\" ;; suggestion from tabnine
+    :old_suffix \"x\"
+    :new_suffix \"\"
+    :detail \"13%\"
+    :type \"\"
+    :user_message [])
+")
 
 (defvar company-tabnine--disabled nil
   "Variable to temporarily disable company-tabnine and pass control to next backend.")
@@ -374,34 +387,27 @@ Resets every time successful completion is returned.")
   (dolist (hook company-tabnine--hooks-alist)
     (add-hook (car hook) (cdr hook))))
 
-(defun company-tabnine-kill-process ()
-  "Kill TabNine process."
-  (when company-tabnine--process
-    (let ((process company-tabnine--process))
-      (setq company-tabnine--process nil) ; this happens first so sentinel don't catch the kill
-      (delete-process process)))
-  ;; hook remove
-  (dolist (hook company-tabnine--hooks-alist)
-    (remove-hook (car hook) (cdr hook))))
-
 (defun company-tabnine-send-request (request)
   "Send REQUEST to TabNine server.  REQUEST needs to be JSON-serializable object."
-  (push (point) company-tabnine--request-point)
-  (when (null company-tabnine--process)
-    (company-tabnine-start-process))
-  (when company-tabnine--process
-    ;; TODO make sure utf-8 encoding works
-    (let ((encoded (concat
-                    (if (and company-tabnine-use-native-json
-                             (fboundp 'json-serialize))
-                        (json-serialize request
-                                        :null-object nil
-                                        :false-object json-false)
-                      (let ((json-null nil)
-                            (json-encoding-pretty-print nil))
-                        (json-encode-list request)))
-                    "\n")))
-      (process-send-string company-tabnine--process encoded))))
+  (when (< (length company-tabnine--request-point) company-tabnine-max-request-buffer)
+    (push (point) company-tabnine--request-point)
+    (when (null company-tabnine--process)
+      (company-tabnine-start-process))
+    (when company-tabnine--process
+      ;; TODO make sure utf-8 encoding works
+      (let ((encoded (concat
+                      (if (and company-tabnine-use-native-json
+                               (fboundp 'json-serialize))
+                          (json-serialize request
+                                          :null-object nil
+                                          :false-object json-false)
+                        (let ((json-null nil)
+                              (json-encoding-pretty-print nil))
+                          (json-encode-list request)))
+                      "\n")))
+        (process-send-string company-tabnine--process encoded)
+        (unless company-tabnine-async
+          (accept-process-output company-tabnine--process company-tabnine-wait))))))
 
 (defun company-tabnine--make-request (method)
   "Create request body for method METHOD and parameters PARAMS."
@@ -421,7 +427,7 @@ Resets every time successful completion is returned.")
              (list
               :before (buffer-substring-no-properties before-point (point))
               :after (buffer-substring-no-properties (point) after-point)
-              :fiename (or (buffer-file-name) nil)
+              :filename (or (buffer-file-name) nil)
               :region_includes_beginning (if (= before-point buffer-min)
                                              t json-false)
               :region_includes_end (if (= after-point buffer-max)
@@ -452,7 +458,6 @@ Resets every time successful completion is returned.")
 
 (defun company-tabnine--decode (msg)
   "Decode TabNine server response MSG, and return the decoded object."
-  (print msg)
   (let ((json-parser (if (fboundp 'json-parse-string)
                          (lambda (data) (json-parse-string data :object-type 'alist))
                        'json-read-from-string)))
@@ -485,6 +490,9 @@ PROCESS is the process under watch, EVENT is the event occurred."
     (message "TabNine process %s received event %s."
              (prin1-to-string process)
              (prin1-to-string event))
+
+    (setq company-tabnine--request-point nil)
+    (setq company-tabnine--current-request-count 0)
 
     (if (>= company-tabnine--restart-count
             company-tabnine-max-restart-count)
@@ -522,8 +530,8 @@ PROCESS is the process under watch, OUTPUT is the output received."
                                                      (string= (plist-get left :candidate) (plist-get right :candidate)))))
   (unless (= (length company-tabnine--response-cache) 0)
     `(,(buffer-substring-no-properties
-      (plist-get (car company-tabnine--response-cache) :point)
-      (point)) . t)))
+        (plist-get (car company-tabnine--response-cache) :point)
+        (point)) . t)))
 
 (defun company-tabnine--prefix ()
   "Prefix-command handler for the company backend."
@@ -594,6 +602,13 @@ PROCESS is the process under watch, OUTPUT is the output received."
 Return completion candidates.  Must be called after `company-tabnine-query'."
   (company-tabnine--make-candidates company-tabnine--response-cache))
 
+(defun company-tabnine--meta (candidate)
+  "Return meta information for CANDIDATE.  Currently used to display user messages."
+  (when company-tabnine-show-user-message
+    (let ((messages (get-text-property 0 'user_message candidate)))
+      (when messages
+        (s-join " " messages)))))
+
 (defun company-tabnine--post-completion (candidate)
   "Replace old suffix with new suffix for CANDIDATE."
   (setq company-tabnine--response-cache nil)
@@ -607,15 +622,20 @@ Return completion candidates.  Must be called after `company-tabnine-query'."
         (save-excursion
           (insert new_suffix))))))
 
-(defun company-tabnine--meta (candidate)
-  "Return meta information for CANDIDATE.  Currently used to display user messages."
-  (when company-tabnine-show-user-message
-    (let ((messages (get-text-property 0 'user_message candidate)))
-      (when messages
-            (s-join " " messages)))))
 ;;
 ;; Interactive functions
 ;;
+
+(defun company-tabnine-kill-process ()
+  "Kill TabNine process."
+  (interactive)
+  (when company-tabnine--process
+    (let ((process company-tabnine--process))
+      (setq company-tabnine--process nil) ; this happens first so sentinel don't catch the kill
+      (delete-process process)))
+  ;; hook remove
+  (dolist (hook company-tabnine--hooks-alist)
+    (remove-hook (car hook) (cdr hook))))
 
 (defun company-tabnine-restart-server ()
   "Start/Restart TabNine server."
@@ -694,6 +714,7 @@ See documentation of `company-backends' for details."
     ;; TODO: should we use async or not?
     ;; '(:async . (lambda (callback)
     ;;              (funcall callback (company-tabnine--candidates) arg))))
+    (meta (company-tabnine--meta arg))
     (annotation (company-tabnine--annotation arg))
     (post-completion (company-tabnine--post-completion arg))
     (no-cache t)
