@@ -125,6 +125,8 @@
   (require-init 'init-java)
   (require-init 'init-sidebar)
   (require-init 'init-dap)
+  (require-init 'init-tabnine-capf)
+  (require-init 'company-tabnine)
 
   ;; projectile costs 7% startup time
 
