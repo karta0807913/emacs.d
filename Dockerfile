@@ -4,7 +4,6 @@ WORKDIR /root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN sed -i 's/archive\.ubuntu\.com/tw.archive.ubuntu.com/' /etc/apt/sources.list
 # install emacs and utils
 RUN apt-get update && \
     apt-get install -y wget software-properties-common wget curl git &&\

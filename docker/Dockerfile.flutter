@@ -4,15 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /
 
-RUN sed -i 's/archive\.ubuntu\.com/tw.archive.ubuntu.com/' /etc/apt/sources.list
 RUN apt-get update && apt-get install -y git sudo libglu1-mesa default-jre pulseaudio libxcomposite1 libxcursor1 curl unzip && rm -rf /var/lib/apt/lists/*
-
-RUN groupadd code && useradd -u 1000 -g code -g sudo -d /home/code code && chmod 600 /etc/sudoers && \
-    echo 'code ALL=(ALL:ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-RUN mkdir /flutter /android-sdk && chown -R code:code /android-sdk /flutter
-
-USER code
 
 RUN cd ~/ && curl -L 'https://dl.google.com/android/repository/commandlinetools-linux-7302050_latest.zip' > commandlinetools.zip && \
     unzip commandlinetools.zip && rm commandlinetools.zip && \
@@ -26,18 +18,22 @@ RUN (yes | /android-sdk/cmdline-tools/latest/bin/sdkmanager "sources;android-30"
     rm -rf /android-sdk/emulator && (yes | /android-sdk/cmdline-tools/latest/bin/sdkmanager "emulator")
 RUN yes | /android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
 
+RUN mv /usr/bin/tar /usr/bin/tar_ && printf '#!/bin/bash\ntar_ --no-same-owner "$@"' > /usr/bin/tar && chmod +x /usr/bin/tar
 RUN /flutter/bin/flutter config --android-sdk /android-sdk && /flutter/bin/flutter doctor
  
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/flutter/bin:/android-sdk/cmdline-tools/latest/bin:/android-sdk/emulator
 
 ENV DEBIAN_FRONTEND=
 
-## create emulator named "test"
-# RUN yes '' | avdmanager create avd -k 'system-images;android-28;google_apis;x86_64' -n test
+## since podman run as rooless, sandbox is no longer required.
+ENV QTWEBENGINE_DISABLE_SANDBOX=1
 
-## run emulator "test"
-# RUN emulator -avd test
+## create emulator named "default"
+RUN yes '' | avdmanager create avd -k 'system-images;android-28;google_apis;x86_64' -n default
 
-WORKDIR /home/code
+## run emulator "default"
+# RUN emulator -avd default
+
+WORKDIR /home/flutter
 
 CMD [ "emacs", "-nw" ]
