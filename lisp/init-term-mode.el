@@ -57,6 +57,16 @@ EVENT is ignored."
 
 (defun eshell-mode-hook-setup ()
   "Set up `eshell-mode'."
+  (define-key evil-normal-state-local-map (kbd "C-k") (lambda ()
+                                                        (interactive)
+                                                        (call-interactively 'eshell-previous-input)
+                                                        (delete-region (point) (line-end-position))))
+  (define-key evil-normal-state-local-map (kbd "C-j") (lambda ()
+                                                        (interactive)
+                                                        (call-interactively 'eshell-next-input)
+                                                        (delete-region (point) (line-end-position))))
+  (define-key evil-insert-state-local-map (kbd "C-k") 'eshell-previous-input)
+  (define-key evil-insert-state-local-map (kbd "C-j") 'eshell-next-input)
   (local-set-key (kbd "C-c C-y") 'hydra-launcher/body)
   (local-set-key (kbd "M-n") 'counsel-esh-history))
 (add-hook 'eshell-mode-hook 'eshell-mode-hook-setup)
