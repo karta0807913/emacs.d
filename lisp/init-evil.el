@@ -277,7 +277,7 @@ If the character before and after CH is space or tab, CH is NOT slash"
              (w3m-mode . emacs)
              (gud-mode . emacs)
              (help-mode . emacs)
-             (eshell-mode . emacs)
+             (eshell-mode . normal)
              (shell-mode . emacs)
              (xref--xref-buffer-mode . emacs)
              ;;(message-mode . emacs)
