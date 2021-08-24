@@ -88,7 +88,7 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
   (interactive)
   (flycheck-mode +1)
   (lsp)
-  (add-hook 'before-save-hook 'lsp-format-buffer))
+  (add-hook 'before-save-hook 'lsp-format-buffer 0 t))
 
 (add-hook 'typescript-mode-hook #'setup-lsp-mode)
 
