@@ -213,9 +213,6 @@ FN checks these characters belong to normal word characters."
 
     ;; don't spell check double words
     (setq-local wucuo-flyspell-check-doublon nil)
-    ;; @see http://emacsredux.com/blog/2013/04/21/camelcase-aware-editing/
-    (unless (derived-mode-p 'js2-mode)
-      (subword-mode 1))
 
     ;; now css-mode derives from prog-mode
     ;; see the code of `counsel-css-imenu-setup'
