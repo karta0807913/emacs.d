@@ -46,6 +46,8 @@ Stay in current window with a prefix argument ARG."
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
   (define-key treemacs-mode-map "j" 'treemacs-next-line)
   (define-key treemacs-mode-map "k" 'treemacs-previous-line)
+  (define-key treemacs-mode-map "J" 'treemacs-next-neighbour)
+  (define-key treemacs-mode-map "K" 'treemacs-previous-neighbour)
   (define-key treemacs-mode-map "ov" 'treemacs-visit-node-vsplit)
   (define-key treemacs-mode-map "os" 'treemacs-visit-node-split)
   (define-key treemacs-mode-map "/" 'evil-ex-search-forward)

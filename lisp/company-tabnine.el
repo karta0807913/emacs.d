@@ -68,11 +68,9 @@
 
 (require 'cl-lib)
 (require 'company)
-(require 'company-template)
 (require 'dash)
 (require 'json)
 (require 's)
-(require 'unicode-escape)
 (require 'url)
 
 
@@ -267,6 +265,9 @@ contains of '(
 (defvar company-tabnine--response-chunks nil
   "The string to store response chunks from TabNine server.")
 
+(defvar company-tabnine--candidates-updated nil
+  "Has the candidate changed since the last request")
+
 ;;
 ;; Major mode definition
 ;;
@@ -274,11 +275,6 @@ contains of '(
 ;;
 ;; Global methods
 ;;
-
-(defun company-tabnine--prefix-candidate-p (candidate prefix)
-  "Return t if CANDIDATE string begins with PREFIX."
-  (let ((insertion-text (cdr (assq 'insertion_text candidate))))
-    (s-starts-with? prefix insertion-text t)))
 
 (defun company-tabnine--error-no-binaries ()
   "Signal error for when TabNine binary is not found."
@@ -465,7 +461,9 @@ contains of '(
             (mapcar json-parser (butlast (split-string msg "\n"))))))
 
 (defun company-tabnine--store-response-to-cache (response)
-  "Store the response from server and format to cache."
+  "Store the response from server and format to cache.
+
+Replace the new line character '\n' to '¬'."
   (setq company-tabnine--response-cache
         (append company-tabnine--response-cache
                 (mapcar (lambda (result)
@@ -479,6 +477,7 @@ contains of '(
                            :type (or (alist-get 'type result) "")
                            :user_message (alist-get 'user_message result)))
                         (alist-get 'results response))))
+  (setq company-tabnine--candidates-updated t)
   (setq company-tabnine--request-point (nbutlast company-tabnine--request-point)))
 
 (defun company-tabnine--process-sentinel (process event)
@@ -595,7 +594,8 @@ PROCESS is the process under watch, OUTPUT is the output received."
                                        (substring origin-candidate pad-length)
                                      (concat (buffer-substring-no-properties (- completing-point pad-length) completing-point) origin-candidate))))
               (propertize
-               candidate-text
+               (replace-regexp-in-string "\n" "¬" candidate-text)
+               'original-candidate candidate-text
                'annotation (concat (plist-get result :detail) " " (plist-get result :type))
                'new_suffix (plist-get result :new_suffix)
                'old_suffix (plist-get result :old_suffix)
@@ -605,7 +605,8 @@ PROCESS is the process under watch, OUTPUT is the output received."
 (defun company-tabnine--candidates (prefix)
   "Candidates-command handler for the company backend for PREFIX.
 
-Return completion candidates.  Must be called after `company-tabnine-query'."
+Return completion candidates from 'company-tabnine--response-cache'."
+  (setq company-tabnine--candidates-updated nil)
   (company-tabnine--make-candidates company-tabnine--response-cache prefix))
 
 (defun company-tabnine--meta (candidate)
@@ -616,7 +617,10 @@ Return completion candidates.  Must be called after `company-tabnine-query'."
         (s-join " " messages)))))
 
 (defun company-tabnine--post-completion (candidate)
-  "Replace old suffix with new suffix for CANDIDATE."
+  "Replace candidate to original string and replace old suffix with new suffix for CANDIDATE."
+  (delete-region (point) (- (point) (length candidate)))
+  (insert (get-text-property 0 'original-candidate candidate))
+
   (setq company-tabnine--response-cache nil)
   (when company-tabnine-auto-balance
     (let ((old_suffix (get-text-property 0 'old_suffix candidate))
@@ -723,7 +727,7 @@ See documentation of `company-backends' for details."
     (meta (company-tabnine--meta arg))
     (annotation (company-tabnine--annotation arg))
     (post-completion (company-tabnine--post-completion arg))
-    (no-cache t)
+    (no-cache company-tabnine--candidates-updated)
     (sorted t)))
 
 ;;
