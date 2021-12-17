@@ -117,7 +117,6 @@ If HARDCODED-ARRAY-INDEX provided, array index in JSON path is replaced with it.
                             (setq js-indent-level 2)
                             (make-variable-buffer-local 'javascript-indent-level)
                             (setq javascript-indent-level 2)))
-
 ;; {{ js-comint
 (defun my-js-clear-send-buffer ()
   (interactive)

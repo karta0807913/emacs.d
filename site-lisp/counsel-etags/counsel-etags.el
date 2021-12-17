@@ -1,17 +1,17 @@
 ;;; counsel-etags.el --- Fast and complete Ctags/Etags solution using ivy -*- lexical-binding: t -*-
 
-;; Copyright (C) 2018-2020 Chen Bin
+;; Copyright (C) 2018-2021 Chen Bin
 
 ;; Author: Chen Bin <chenbin dot sh AT gmail dot com>
 ;; URL: http://github.com/redguardtoo/counsel-etags
-;; Package-Requires: ((emacs "25.1") (counsel "0.13.0"))
+;; Package-Requires: ((emacs "25.1") (counsel "0.13.4"))
 ;; Keywords: tools, convenience
-;; Version: 1.9.16
+;; Version: 1.10.0
 
-;; This program is free software; you can redistribute it and/or modify
+;; This program is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation; either version 3, or (at your option)
-;; any later version.
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
 
 ;; This program is distributed in the hope that it will be useful,
 ;; but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,7 +19,8 @@
 ;; GNU General Public License for more details.
 
 ;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 ;; This file is not part of GNU Emacs.
 
 ;;; Commentary:
@@ -52,9 +53,11 @@
 ;;   `counsel-etags-universal-ctags-p' to detect if Universal Ctags is used.
 ;;   `counsel-etags-exuberant-ctags-p' to detect if Exuberant Ctags is used.
 ;;   See documentation of `counsel-etags-use-ripgrep-force' on using ripgrep.
-;;   If it's not set, correct grep program is autmatically detected.
+;;   If it's not set, correct grep program is automatically detected.
 ;;
 ;; Tips,
+;; - Use `pop-tag-mark' to jump back.
+;;
 ;; - The grep program path on Native Windows Emacs uses either forward slash or
 ;;   backward slash.  Like "C:/rg.exe" or "C:\\\\rg.exe".
 ;;   If grep program path is added to environment variable PATH, you don't need
@@ -262,8 +265,13 @@ If candidates number is bigger than this value, show raw candidates without clea
   :group 'counsel-etags
   :type 'integer)
 
-;; (defvar counsel-etags-unit-test-p nil
-;;   "Running unit test.  This is internal variable.")
+(defcustom counsel-etags-major-modes-to-strip-default-tag-name
+  '(org-mode
+    markdown-mode)
+  "Major mode where default tag name need be stripped.
+It's used by `counsel-etags-find-tag-name-default'."
+  :group 'counsel-etags
+  :type '(repeat 'sexp))
 
 (defcustom counsel-etags-ignore-directories
   '(;; VCS
@@ -459,6 +467,18 @@ The parameter of hook is full path of the tags file."
   :group 'counsel-etags
   :type 'hook)
 
+(defcustom counsel-etags-org-property-name-for-grepping
+  "GREP_PROJECT_ROOT"
+  "Org node property name for get grepping project root."
+  :group 'counsel-etags
+  :type 'string)
+
+(defcustom counsel-etags-org-extract-project-root-from-node-p
+  t
+  "Extract project root directory from org node."
+  :group 'counsel-etags
+  :type 'boolean)
+
 (defcustom counsel-etags-update-interval 300
   "The interval (seconds) to update tags file.
 Used by `counsel-etags-virtual-update-tags'.
@@ -521,6 +541,33 @@ The file is also used by tags file auto-update process.")
 (defvar counsel-etags-last-tagname-at-point nil
   "Last tagname queried at point.")
 
+(defun counsel-etags-org-entry-get-project-root ()
+  "Get org property from current node or parent node recursively."
+  (when (and (derived-mode-p 'org-mode)
+             counsel-etags-org-extract-project-root-from-node-p)
+    (unless (featurep 'org) (require 'org))
+    (unless (featurep 'outline) (require 'outline))
+    (let* ((pos (point))
+           (prop-name counsel-etags-org-property-name-for-grepping)
+           (rlt (org-entry-get pos prop-name))
+           (loop t)
+           old-pos)
+
+      (save-excursion
+        (unless rlt
+          (setq old-pos (point))
+          (condition-case nil (outline-up-heading 1))
+          (while loop
+            (cond
+             ((or (setq rlt (org-entry-get (point) prop-name))
+                  (eq (point) old-pos))
+              (setq loop nil))
+             (t
+              (setq old-pos (point))
+              (condition-case nil (outline-up-heading 1)))))
+          (goto-char pos))
+        rlt))))
+
 (defun counsel-etags-win-path (executable-name drive)
   "Guess EXECUTABLE-NAME's full path in Cygwin on DRIVE."
   (let* ((path (concat drive ":\\\\cygwin64\\\\bin\\\\" executable-name ".exe")))
@@ -548,7 +595,7 @@ Return nil if it's not found."
 ;;;###autoload
 (defun counsel-etags-version ()
   "Return version."
-  (message "1.9.16"))
+  (message "1.10.0"))
 
 ;;;###autoload
 (defun counsel-etags-get-hostname ()
@@ -564,7 +611,7 @@ Return nil if it's not found."
 
 (defun counsel-etags-get-tags-file-path (dir)
   "Get full path of tags file from DIR."
-  (and dir (file-truename (concat (file-name-as-directory dir)
+  (and dir (expand-file-name (concat (file-name-as-directory dir)
                                   counsel-etags-tags-file-name))))
 
 (defun counsel-etags-locate-tags-file ()
@@ -575,7 +622,7 @@ Return nil if it's not found."
 (defun counsel-etags-tags-file-directory ()
   "Directory of tags file."
   (let* ((f (counsel-etags-locate-tags-file)))
-    (if f (file-name-directory (file-truename f)))))
+    (if f (file-name-directory (expand-file-name f)))))
 
 (defun counsel-etags-locate-project ()
   "Return the root of the project."
@@ -593,11 +640,11 @@ Return nil if it's not found."
 
 (defun counsel-etags-add-tags-file-to-history (tags-file)
   "Add TAGS-FILE to the top of `counsel-etags-tags-file-history'."
-  (let* ((file (file-truename tags-file)))
+  (let* ((file (expand-file-name tags-file)))
     (setq counsel-etags-tags-file-history
           (delq nil (mapcar
                      (lambda (s)
-                       (unless (string= file (file-truename s)) s))
+                       (unless (string= file (expand-file-name s)) s))
                      counsel-etags-tags-file-history)))
     (push tags-file counsel-etags-tags-file-history)))
 
@@ -674,7 +721,7 @@ If it's Emacs etags return nil."
 (defun counsel-etags-universal-ctags-opt ()
   "Generate option for Universal ctags."
   (format "--options=\"%s\""
-          (file-truename counsel-etags-ctags-options-file)))
+          (expand-file-name counsel-etags-ctags-options-file)))
 
 (defun counsel-etags-convert-config (config program)
   "Convert CONFIG of PROGRAM into Universal Ctags format."
@@ -734,7 +781,7 @@ If it's Emacs etags return nil."
   "Specify ignore configuration file (.gitignore, for example) for Ctags."
   (let* (rlt configs filename)
     (dolist (f counsel-etags-ignore-config-files)
-      (when (file-exists-p (setq filename (file-truename f)))
+      (when (file-exists-p (setq filename (expand-file-name f)))
         (push (file-local-name filename) configs)))
     (setq rlt (mapconcat (lambda (c) (format "--exclude=\"@%s\"" c)) configs " "))
     (when counsel-etags-debug
@@ -936,8 +983,8 @@ CURRENT-FILE is used to compare with candidate path."
       ;; Emacs 27 `string-distance' is much faster than Lisp implementation.
       (sort cands
             `(lambda (item1 item2)
-               (let* ((a (counsel-etags--strip-path (file-truename (if ,is-string item1 (cadr item1))) ,strip-count))
-                      (b (counsel-etags--strip-path (file-truename (if ,is-string item2 (cadr item2))) ,strip-count)))
+               (let* ((a (counsel-etags--strip-path (expand-file-name (if ,is-string item1 (cadr item1))) ,strip-count))
+                      (b (counsel-etags--strip-path (expand-file-name (if ,is-string item2 (cadr item2))) ,strip-count)))
                  (< (string-distance a ,ref t)
                     (string-distance b ,ref t))))))
 
@@ -947,11 +994,15 @@ CURRENT-FILE is used to compare with candidate path."
       (let* ((h (make-hash-table :test 'equal)))
         (sort cands
               `(lambda (item1 item2)
-                 (let* ((a (counsel-etags--strip-path (file-truename (if ,is-string item1 (cadr item1))) ,strip-count))
-                        (b (counsel-etags--strip-path (file-truename (if ,is-string item2 (cadr item2))) ,strip-count)))
+                 (let* ((a (counsel-etags--strip-path (expand-file-name (if ,is-string item1 (cadr item1))) ,strip-count))
+                        (b (counsel-etags--strip-path (expand-file-name (if ,is-string item2 (cadr item2))) ,strip-count)))
                    (< (counsel-etags-levenshtein-distance a ,ref ,h)
                       (counsel-etags-levenshtein-distance b ,ref ,h))))))))))
 
+
+(defun counsel-etags-cache-invalidate (tags-file)
+  "Invalidate the cache of TAGS-FILE."
+  (plist-put counsel-etags-cache (intern tags-file) nil))
 
 (defun counsel-etags-cache-content (tags-file)
   "Read cache using TAGS-FILE as key."
@@ -1242,7 +1293,7 @@ Focus on TAGNAME if it's not nil."
                ;; No need to hint after user set `counsel-etags-extra-tags-files'
                (not counsel-etags-extra-tags-files)
                (not counsel-etags-can-skip-project-root))
-      (setq src-dir (read-directory-name "Ctags will scan code at:"
+      (setq src-dir (read-directory-name "Ctags will scan code at: "
                                          (counsel-etags-locate-project)))
       (cond
        (src-dir
@@ -1257,7 +1308,12 @@ Focus on TAGNAME if it's not nil."
 ;;;###autoload
 (defun counsel-etags-find-tag-name-default ()
   "Find tag at point."
-  (find-tag-default))
+  (let ((tag-name (find-tag-default)))
+    (when (and (memq major-mode
+                     counsel-etags-major-modes-to-strip-default-tag-name)
+           (string-match "^\\(`.*`\\|=.*=\\|~.*~\\|\".*\"\\|'.*'\\)$" tag-name))
+      (setq tag-name (substring tag-name 1 (1- (length tag-name)))))
+    tag-name))
 
 ;;;###autoload
 (defun counsel-etags-word-at-point (predicate)
@@ -1292,7 +1348,7 @@ For example, get a word when dot character is part of word,
   "Use Ctags to scan code at DIR."
   (interactive)
   (let* ((src-dir (or dir
-                      (read-directory-name "Ctags will scan code at:"
+                      (read-directory-name "Ctags will scan code at: "
                                            (or (counsel-etags-locate-project)
                                                default-directory)))))
     (when src-dir
@@ -1364,7 +1420,7 @@ Tags might be sorted by comparing tag's path with CURRENT-FILE."
       (message "Tags file is not ready yet."))
      ((not tagname)
       ;; OK, need use ivy-read to find candidate
-      (ivy-read "Fuzz matching tags:"
+      (ivy-read "Fuzz matching tags: "
                 `(lambda (s)
                    (counsel-etags-list-tag-function s ,current-file))
                 :history 'counsel-git-grep-history
@@ -1487,7 +1543,7 @@ Step 2, user keeps filtering tags."
 
 ;;;###autoload
 (defun counsel-etags-find-tag-at-point ()
-  "Find tag using tagname at point.
+  "Find tag using tagname at point.  Use `pop-tag-mark' to jump back.
 Please note parsing tags file containing line with 2K characters could be slow.
 That's the known issue of Emacs Lisp.  The program itself is perfectly fine."
   (interactive)
@@ -1513,7 +1569,7 @@ That's the known issue of Emacs Lisp.  The program itself is perfectly fine."
                                   (lambda (e) (if (string= dir (cdr e)) e))
                            counsel-etags-tag-history))))
       (when collection
-        (ivy-read "Recent tag names:"
+        (ivy-read "Recent tag names: "
                   collection
                   :action `(lambda (e)
                              (counsel-etags-open-file-api (car e) (cdr e)))
@@ -1535,8 +1591,8 @@ The tags updating might not happen."
 
     (when (and dir
                tags-file
-               (string-match-p (file-name-directory (file-truename tags-file))
-                               (file-truename dir)))
+               (string-match-p (file-name-directory (expand-file-name tags-file))
+                               (expand-file-name dir)))
       (cond
        ((or (not counsel-etags-timer)
             (> (- (float-time (current-time)) (float-time counsel-etags-timer))
@@ -1548,7 +1604,7 @@ The tags updating might not happen."
         ;; start updating
         (if counsel-etags-debug (message "counsel-etags-virtual-update-tags actually happened."))
 
-        (let* ((dir (file-name-directory (file-truename (counsel-etags-locate-tags-file)))))
+        (let* ((dir (file-name-directory (expand-file-name (counsel-etags-locate-tags-file)))))
           (if counsel-etags-debug (message "update tags in %s" dir))
           (funcall counsel-etags-update-tags-backend dir)))
 
@@ -1666,20 +1722,22 @@ Extended regex is used, like (pattern1|pattern2)."
 
 ;;;###autoload
 (defun counsel-etags-grep (&optional default-keyword hint root show-keyword-p)
-  "Grep at project root directory or current directory.
-Try to find best grep program (ripgrep, grep...) automatically.
+  "Grep at project with best grep program (ripgrep, grep...) automatically.
 Extended regex like (pattern1|pattern2) is used.
 If DEFAULT-KEYWORD is not nil, it's used as grep keyword.
 If HINT is not nil, it's used as grep hint.
-ROOT is root directory to grep.
+ROOT is the directory to grep.  It's automatically detected.
+If current file is org file, current node or parent node's property
+\"GREP_PROJECT_ROOT\" is read to get the root directory to grep.
 If SHOW-KEYWORD-P is t, show the keyword in the minibuffer."
   (interactive)
   (let* ((text (if default-keyword default-keyword
                   (counsel-etags-read-keyword "Regular expression for grep: ")))
          (keyword (funcall counsel-etags-convert-grep-keyword text))
-         (default-directory (file-truename (or root
-                                               (counsel-etags-locate-project)
-                                               default-directory)))
+         (default-directory (expand-file-name (or root
+                                                  (counsel-etags-org-entry-get-project-root)
+                                                  (counsel-etags-locate-project)
+                                                  default-directory)))
          (time (current-time))
          (cmd (counsel-etags-grep-cli keyword nil))
          (cands (split-string (shell-command-to-string cmd) "[\r\n]+" t))
@@ -1742,7 +1800,11 @@ If FORCED-TAGS-FILE is nil, the updating process might now happen."
   (let* ((tags-file (or forced-tags-file
                         (counsel-etags-locate-tags-file))))
     (when tags-file
-      (counsel-etags-scan-dir (file-name-directory (file-truename tags-file)))
+      ;; @see https://github.com/redguardtoo/counsel-etags/issues/82
+      ;; If code file is moved and TAGS is updated, invalidate the cache.
+      (counsel-etags-cache-invalidate tags-file)
+      ;; scan the code now
+      (counsel-etags-scan-dir (file-name-directory (expand-file-name tags-file)))
       (unless counsel-etags-quiet-when-updating-tags
         (message "%s is updated!" tags-file)))))
 
@@ -1759,7 +1821,7 @@ If FORCED-TAGS-FILE is nil, the updating process might now happen."
 (defun counsel-etags-append-to-tags-file (sections tags-file)
   "Append SECTIONS into TAGS-FILE.
 Each section is a pair of file and tags content in that file.
-File can be url template like \"https://developer.mozilla.org/en-US/docs/Web/API/%s\".
+File can be url template like \"https//myproj.com/docs/API/%s\".
 The `counsel-etags-browse-url-function' is used to open the url."
   (when (and tags-file
              (file-exists-p tags-file)
@@ -1816,12 +1878,16 @@ The `counsel-etags-browse-url-function' is used to open the url."
       cands))))
 
 (ivy-set-occur 'counsel-etags-recent-tag 'counsel-etags-recent-tag-occur)
-(ivy-set-display-transformer 'counsel-etags-recent-tag 'counsel-git-grep-transformer)
+(ivy-configure #'counsel-etags-recent-tag
+  :display-transformer-fn #'counsel-git-grep-transformer)
+
 (ivy-set-occur 'counsel-etags-find-tag 'counsel-etags-find-tag-occur)
-(ivy-set-display-transformer 'counsel-etags-find-tag 'counsel-git-grep-transformer)
+(ivy-configure 'counsel-etags-find-tag
+  :display-transformer-fn 'counsel-git-grep-transformer)
 
 (ivy-set-occur 'counsel-etags-grep 'counsel-etags-grep-occur)
-(ivy-set-display-transformer 'counsel-etags-grep 'counsel-git-grep-transformer)
+(ivy-configure 'counsel-etags-grep
+  :display-transformer-fn 'counsel-git-grep-transformer)
 ;; }}
 
 (provide 'counsel-etags)

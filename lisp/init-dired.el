@@ -71,6 +71,7 @@ If no files marked, always operate on current line in dired-mode."
 (defun dired-mode-hook-setup ()
   "Set up dired."
   (dired-hide-details-mode 1)
+  (local-set-key  "r" 'dired-up-directory)
   (local-set-key  "e" 'my-ediff-files)
   (local-set-key  "/" 'dired-isearch-filenames)
   (local-set-key  "\\" 'diredext-exec-git-command-in-shell))
@@ -83,6 +84,10 @@ If no files marked, always operate on current line in dired-mode."
   "Recent directories accessed by dired.")
 
 (with-eval-after-load 'dired
+  ;; re-use dired buffer, available in Emacs 28
+  ;; @see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=20598
+  (setq dired-kill-when-opening-new-dired-buffer t)
+
   ;; search file name only when focus is over file
   (setq dired-isearch-filenames 'dwim)
 

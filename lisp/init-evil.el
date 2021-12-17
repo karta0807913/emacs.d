@@ -71,6 +71,7 @@
   (evil-local-set-key 'normal "q" (lambda () (interactive) (quit-window t)))
   (evil-local-set-key 'normal (kbd "RET") 'ffip-diff-find-file)
   ;; "C-c C-a" is binding to `diff-apply-hunk' in `diff-mode'
+  (evil-local-set-key 'normal "u" 'diff-undo)
   (evil-local-set-key 'normal "a" 'ffip-diff-apply-hunk)
   (evil-local-set-key 'normal "o" 'ffip-diff-find-file))
 (add-hook 'ffip-diff-mode-hook 'ffip-diff-mode-hook-setup)
@@ -261,42 +262,45 @@ If the character before and after CH is space or tab, CH is NOT slash"
 
 ;; {{ specify major mode uses Evil (vim) NORMAL state or EMACS original state.
 ;; You may delete this setup to use Evil NORMAL state always.
-(dolist (p '((minibuffer-inactive-mode . emacs)
-             (calendar-mode . emacs)
-             (special-mode . emacs)
-             (grep-mode . emacs)
-             (Info-mode . emacs)
-             (term-mode . emacs)
-             (sdcv-mode . emacs)
-             (anaconda-nav-mode . emacs)
-             (log-edit-mode . emacs)
-             (vc-log-edit-mode . emacs)
-             (magit-log-edit-mode . emacs)
-             (erc-mode . emacs)
-             (neotree-mode . emacs)
-             (w3m-mode . emacs)
-             (gud-mode . emacs)
-             (help-mode . emacs)
-             (eshell-mode . normal)
-             (shell-mode . emacs)
-             (xref--xref-buffer-mode . emacs)
-             ;;(message-mode . emacs)
-             (epa-key-list-mode . emacs)
-             (fundamental-mode . emacs)
-             (weibo-timeline-mode . emacs)
-             (weibo-post-mode . emacs)
-             (woman-mode . emacs)
-             (sr-mode . emacs)
-             (profiler-report-mode . emacs)
-             (dired-mode . emacs)
-             (compilation-mode . emacs)
-             (speedbar-mode . emacs)
-             (ivy-occur-mode . emacs)
-             (ffip-file-mode . emacs)
-             (ivy-occur-grep-mode . normal)
-             (messages-buffer-mode . normal)
-             (js2-error-buffer-mode . emacs)))
-  (evil-set-initial-state (car p) (cdr p)))
+(defvar my-initial-evil-state-setup
+  '((minibuffer-inactive-mode . emacs)
+    (calendar-mode . emacs)
+    (special-mode . emacs)
+    (grep-mode . emacs)
+    (Info-mode . emacs)
+    (term-mode . emacs)
+    (sdcv-mode . emacs)
+    (anaconda-nav-mode . emacs)
+    (log-edit-mode . emacs)
+    (vc-log-edit-mode . emacs)
+    (magit-log-edit-mode . emacs)
+    (erc-mode . emacs)
+    (diff-mode . emacs)
+    (ffip-diff-mode . normal)
+    (neotree-mode . emacs)
+    (w3m-mode . emacs)
+    (gud-mode . emacs)
+    (help-mode . emacs)
+    (eshell-mode . emacs)
+    (shell-mode . emacs)
+    (xref--xref-buffer-mode . emacs)
+    ;;(message-mode . emacs)
+    (epa-key-list-mode . emacs)
+    (fundamental-mode . emacs)
+    (weibo-timeline-mode . emacs)
+    (weibo-post-mode . emacs)
+    (woman-mode . emacs)
+    (sr-mode . emacs)
+    (profiler-report-mode . emacs)
+    (dired-mode . emacs)
+    (compilation-mode . emacs)
+    (speedbar-mode . emacs)
+    (ivy-occur-mode . emacs)
+    (ffip-file-mode . emacs)
+    (ivy-occur-grep-mode . normal)
+    (messages-buffer-mode . normal)
+    (js2-error-buffer-mode . emacs))
+  "Default evil state per major mode.")
 ;; }}
 
 ;; I prefer Emacs way after pressing ":" in evil-mode
@@ -641,7 +645,6 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "gg" 'my-counsel-git-grep ; quickest grep should be easy to press
   "gd" 'ffip-show-diff-by-description ;find-file-in-project 5.3.0+
   "vv" 'my-evil-goto-definition ; frequently used
-  "gl" 'my-git-log-trace-definition ; find history of a function or range
   "sh" 'my-select-from-search-text-history
   "rjs" 'run-js
   "jsr" 'js-comint-send-region
@@ -693,8 +696,7 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "sd" 'split-window-horizontally
   "oo" 'delete-other-windows
   ;; }}
-  "xr" 'my-rotate-windows
-  "xt" 'toggle-two-split-window
+  "cr" 'my-windows-setup
   "uu" 'my-transient-winner-undo
   "fs" 'ffip-save-ivy-last
   "fr" 'ivy-resume
@@ -952,6 +954,10 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
 ;; press ",xx" to expand region
 ;; then press "char" to contract, "x" to expand
 (with-eval-after-load 'evil
+  ;; initial evil state per major mode
+  (dolist (p my-initial-evil-state-setup)
+    (evil-set-initial-state (car p) (cdr p)))
+
   ;; evil re-assign "M-." to `evil-repeat-pop-next' which I don't use actually.
   ;; Restore "M-." to original binding command
   (define-key evil-normal-state-map (kbd "M-.") 'xref-find-definitions)
@@ -995,18 +1001,6 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
   "te" 'js2-mode-toggle-element
   "tf" 'js2-mode-toggle-hide-functions)
 
-(general-create-definer my-org-leader-def
-  :prefix ";"
-  :non-normal-prefix "M-;"
-  :states '(normal motion visual)
-  :keymaps 'org-mode-map)
-
-(my-org-leader-def
-  "f" 'my-open-pdf-from-history
-  "n" 'my-open-pdf-next-page
-  "g" 'my-open-pdf-goto-page
-  "p" 'my-open-pdf-previous-page)
-
 (general-create-definer my-jsx-leader-def
   :states '(insert emacs)
   :keymaps 'rjsx-mode-map)
@@ -1015,5 +1009,53 @@ If N > 0 and working on javascript, only occurrences in current N lines are rena
  "<" 'rjsx-electric-lt
  ">" 'rjsx-electric-gt)
 ;; }}
+
+
+;; {{ my personal evil optimization which need be manually enabled.
+(defun my-evil-ex-command-completion-at-point ()
+  "Completion function for ex command history."
+  (let* ((start (or (get-text-property 0 'ex-index evil-ex-cmd)
+                    (point)))
+         (end (point)))
+    (list start end evil-ex-history :exclusive 'no)))
+
+(defun my-search-evil-ex-history ()
+  "Search `evil-ex-history' to complete ex command."
+  (interactive)
+  (let (after-change-functions
+        (completion-styles '(substring))
+        (completion-at-point-functions '(my-evil-ex-command-completion-at-point)))
+    (evil-ex-update)
+    (completion-at-point)
+    (remove-text-properties (minibuffer-prompt-end) (point-max) '(face nil evil))))
+
+(defun my-optimize-evil ()
+  "I prefer mixed Emacs&Vi style.  Run this function in \"~/.custom.el\"."
+  (with-eval-after-load 'evil
+    ;; TAB key still triggers `evil-ex-completion'.
+    (define-key evil-ex-completion-map (kbd "C-d") 'delete-char)
+
+    ;; use `my-search-evil-ex-history' to replace `evil-ex-command-window'
+    (define-key evil-ex-completion-map (kbd "C-f") 'forward-char)
+    (define-key evil-ex-completion-map (kbd "C-s") 'evil-ex-command-window)
+    ;; I use Emacs in terminal which may not support keybinding "C-r" or "M-n"
+    (define-key evil-ex-completion-map (kbd "C-r") 'my-search-evil-ex-history)
+    (define-key evil-ex-completion-map (kbd "M-n") 'my-search-evil-ex-history)))
+;; }}
+
+;; @see https://github.com/redguardtoo/emacs.d/issues/955
+;; `evil-paste-after' => `current-kill' => `interprogram-paste-function'=> `gui-selection-value'
+;; `gui-selection-value' returns clipboard text from CLIPBOARD or "PRIMARY" clipboard which are
+;; also controlled by `select-enable-clipboard' and `select-enable-primary'.
+;; Please note `evil-visual-update-x-selection' automatically updates PRIMARY clipboard with
+;; visual selection.
+;; I set `my-evil-enable-visual-update-x-selection' to nil to avoid all those extra "features".
+(defvar my-evil-enable-visual-update-x-selection nil
+  "Automatically copy the selected text into evil register.
+I'm not sure this is good idea.")
+(defun my-evil-visual-update-x-selection-hack (orig-func &rest args)
+  (when my-evil-enable-visual-update-x-selection
+    (apply orig-func args)))
+(advice-add 'evil-visual-update-x-selection :around #'my-evil-visual-update-x-selection-hack)
 
 (provide 'init-evil)

@@ -4,8 +4,12 @@
 
 ;; evil has already integrated company-mode, see evil-integration.el
 
+(defvar my-company-select-by-number-p t
+  "User can press number key to select company candidate.")
+
 (defvar my-company-zero-key-for-filter nil
-  "If t, pressing 0 calls `company-filter-candidates' per company's status.")
+  "If t, pressing 0 calls `company-filter-candidates' per company's status.
+If `my-company-select-by-number-p' is nil, this flag is ignored. ")
 
 (defvar my-company-zero-key-for-filter nil
   "If t, pressing 0 calls `company-filter-candidates' per company's status.")
@@ -31,7 +35,7 @@ In that case, insert the number."
       (cond
        ((or (cl-find-if (lambda (s) (string-match re s)) company-candidates)
             (> n (length company-candidates))
-            (looking-back "[0-9]+\\.[0-9]*" (line-beginning-position)))
+            (looking-back "[0-9]" (line-beginning-position)))
         (self-insert-command 1))
 
        ((and (eq n 10) my-company-zero-key-for-filter)
@@ -49,11 +53,12 @@ In that case, insert the number."
 
   ;; @see https://oremacs.com/2017/12/27/company-numbers/
   ;; Using digits to select company-mode candidates
-  (let ((map company-active-map))
-    (mapc
-     (lambda (x)
-       (define-key map (format "%d" x) 'my-company-number))
-     (number-sequence 0 9)))
+  (when my-company-select-by-number-p
+    (let ((map company-active-map))
+      (mapc
+       (lambda (x)
+         (define-key map (format "%d" x) 'my-company-number))
+       (number-sequence 0 9))))
 
   (setq company-auto-commit t)
   ;; characters "/ ) . , ;"to trigger auto commit
@@ -115,11 +120,6 @@ In that case, insert the number."
       (apply orig-func args))))
   (advice-add 'company-ispell-available :around #'my-company-ispell-available-hack))
 
-(defun my-add-ispell-to-company-backends ()
-  "Add ispell to the last of `company-backends'."
-  (setq company-backends
-        (add-to-list 'company-backends 'company-ispell)))
-
 ;; {{ setup company-ispell
 (defun toggle-company-ispell ()
   "Toggle company-ispell."
@@ -129,14 +129,14 @@ In that case, insert the number."
     (setq company-backends (delete 'company-ispell company-backends))
     (message "company-ispell disabled"))
    (t
-    (my-add-ispell-to-company-backends)
+    (push 'company-ispell company-backends)
     (message "company-ispell enabled!"))))
 
 (defun company-ispell-setup ()
   ;; @see https://github.com/company-mode/company-mode/issues/50
   (when (boundp 'company-backends)
     (make-local-variable 'company-backends)
-    (my-add-ispell-to-company-backends)
+    (push 'company-ispell company-backends)
     ;; @see https://github.com/redguardtoo/emacs.d/issues/473
     (cond
      ((and (boundp 'ispell-alternate-dictionary)
