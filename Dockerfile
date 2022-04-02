@@ -43,7 +43,7 @@ RUN curl -sL https://deb.nodesource.com/setup_17.x | bash - && \
 ENV GOPATH="/go"
 
 # gopls and golang-1.17
-RUN wget https://golang.org/dl/go1.17.7.linux-amd64.tar.gz -O golang.tar.gz && \
+RUN wget https://golang.org/dl/go1.18.linux-amd64.tar.gz -O golang.tar.gz && \
     tar -C /usr/local -xzf golang.tar.gz && \
     rm -rf golang.tar.gz && \
     apt-get clean && \
@@ -51,9 +51,10 @@ RUN wget https://golang.org/dl/go1.17.7.linux-amd64.tar.gz -O golang.tar.gz && \
     /usr/local/go/bin/go clean -modcache -testcache -cache -x && \
     rm -rf /var/lib/apt/lists/* /go/cache /go/pkg/mod/cache
 
-# elpy stuff
+# python stuff
 RUN apt-get update && \
-    apt-get install -y python3-jedi black python3-autopep8 yapf3 python3-yapf && \
+    apt-get install -y python3-pip && \
+    pip install --no-cache-dir jedi rope yapf pycodestyle pydocstyle python-lsp-server && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/code
