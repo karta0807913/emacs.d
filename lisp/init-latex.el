@@ -1,6 +1,6 @@
 (defun init-lsp-latex-mode ()
   (add-hook 'lsp-mode-hook (lambda ()
-                             (make-local-variable tab-width)
+                             (make-local-variable 'tab-width)
                              (setq tab-width 2)))
   (flycheck-mode +1)
   (flyspell-mode +1)
