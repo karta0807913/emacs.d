@@ -12,8 +12,6 @@
                                 ))))
 
   (defun go-mode-configure ()
-    (set-locale-environment compile-command)
-    (setq compile-command "go test ./...")
     (eval-after-load 'dap-mode (progn  (require 'dap-go) (dap-go-setup))))
 
   (general-create-definer golang-leader-def
@@ -30,8 +28,9 @@
                                   (line-beginning-position) (line-end-position)))
                   (run-args "./..."))
               (save-match-data
-                (string-match "func Test\\([^(]+\\)(t \\*testing.T)" function-text)
-                (if (match-string 1 function-text)
+
+                (if (and (string-match "func Test\\([^(]+\\)(t \\*testing.T)" function-text)
+                          (match-string 1 function-text))
                     (setq run-args (format "-run Test%s" (match-string 1 function-text)))
                   )
                 )
