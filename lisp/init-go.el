@@ -28,14 +28,11 @@
                                   (line-beginning-position) (line-end-position)))
                   (run-args "./..."))
               (save-match-data
-
-                (if (and (string-match "func Test\\([^(]+\\)(t \\*testing.T)" function-text)
-                          (match-string 1 function-text))
-                    (setq run-args (format "-run Test%s" (match-string 1 function-text)))
-                  )
-                )
-              (setq compile-command (format "go test %s" run-args))
-              (my-compile)))))
+                (and (string-match "func Test\\([^(]+\\)(t \\*testing.T)" function-text)
+                     (match-string 1 function-text)
+                     (setq run-args (format "-run Test%s" (match-string 1 function-text)))))
+              (setq compile-command (format "go test %s" run-args))))
+              (my-compile)))
 
   (add-hook 'go-mode-hook #'flycheck-mode)
   (add-hook 'go-mode-hook #'go-mode-lsp-custon-settings)
