@@ -175,6 +175,13 @@ When a buffer can't be restored, when creating a blank wg."
   :type 'string
   :group 'workgroups)
 
+(defcustom wg-major-mode-excludes '(dired-mode
+                                    minibuffer-inactive-mode
+                                    minibuffer-mode)
+  "Buffers/frames with the major modes in this list are excluded."
+  :type '(repeat sexp)
+  :group 'workgroups)
+
 ;; {{ crazy stuff to delete soon
 (defconst wg-buffer-list-original (symbol-function 'buffer-list))
 (defalias 'wg-buffer-list-emacs wg-buffer-list-original)
@@ -182,13 +189,13 @@ When a buffer can't be restored, when creating a blank wg."
 
 (defun buffer-list (&optional frame)
   "Redefinition of `buffer-list'.  Pass FRAME to it.
-Remove file and dired buffers that are not associated with workgroup."
+Remove file and buffers that are not associated with workgroup."
   (let ((res (wg-buffer-list-emacs frame))
         (wg-buf-uids (wg-workgroup-associated-buf-uids)))
     (cl-remove-if (lambda (it)
                     (and (or (buffer-file-name it)
-                             (eq (buffer-local-value 'major-mode it) 'dired-mode))
-                         ;;(not (member b wg-buffers))
+                             (memq (buffer-local-value 'major-mode it)
+                                   wg-major-mode-excludes))
                          (not (member (wg-buffer-uid-or-add it) wg-buf-uids))) )
                   res)))
 
@@ -1110,51 +1117,55 @@ If BUF's file doesn't exist, call `wg-restore-default-buffer'."
 (defun wg-restore-special-buffer (buf &optional switch)
   "Restore a buffer BUF and maybe SWITCH to it."
   (when wg-debug
-    (message "wg-restore-special-buffer => %s %s %s" (wg-buf-name buf) buf switch))
+    (message "wg-restore-special-buffer => buf-name=%s buf=%s switch=%s"
+             (wg-buf-name buf) buf switch))
   (let* ((special-data (wg-buf-special-data buf))
-         (buffer (save-window-excursion
-                   (condition-case err
-                       (let ((fn (car special-data))
-                             created-buffer)
-                         (cond
-                          ((null fn)
-                           (when wg-debug
-                             (message "fn is null. special-data=%s" special-data)))
-                          ((null (setq created-buffer (funcall fn buf)))
-                           (when wg-debug
-                             (message "(funcall fn buf) is null. special-data=%s" special-data))))
-                         created-buffer)
-                     (error (message "Error deserializing %S: %S" (wg-buf-name buf) err)
-                            nil)))))
-    (when (and special-data buffer)
-      (if switch (switch-to-buffer buffer t))
+         buffer)
+
+    (when (and special-data
+               (setq buffer (save-window-excursion
+                              (condition-case err
+                                  (let ((fn (car special-data))
+                                        created-buffer)
+                                    (cond
+                                     ((null fn)
+                                      (when wg-debug
+                                        (message "fn is null. special-data=%s" special-data)))
+                                     ((null (setq created-buffer (funcall fn buf)))
+                                      (when wg-debug
+                                        (message "(funcall fn buf) is null. special-data=%s" special-data))))
+                                    created-buffer)
+                                (error (message "Error deserializing %S: %S" (wg-buf-name buf) err)
+                                       nil)))))
+      (when switch (switch-to-buffer buffer t))
       (with-current-buffer buffer
         (wg-set-buffer-uid-or-error (wg-buf-uid buf)))
       buffer)))
 
 (defun wg-restore-buffer (buf &optional switch)
   "Restore BUF, return it and maybe SWITCH to it."
-  (when buf
-    (when wg-debug
-      (message "wg-restore-buffer called => %s" buf))
-    (fset 'buffer-list wg-buffer-list-original)
-    (cond
-     ((wg-restore-existing-buffer buf switch)
+  (let (rlt)
+    (when buf
       (when wg-debug
-        (message "wg-restore-existing-buffer succeeded.")))
+        (message "wg-restore-buffer called => %s" buf))
+      (fset 'buffer-list wg-buffer-list-original)
+      (cond
+       ((setq rlt (wg-restore-existing-buffer buf switch))
+        (when wg-debug
+          (message "wg-restore-existing-buffer succeeded.")))
 
-     ((wg-restore-special-buffer buf switch)
-      (when wg-debug
-        (message "wg-restore-special-buffer succeeded.")))
+       ((setq rlt (wg-restore-special-buffer buf switch))
+        (when wg-debug
+          (message "wg-restore-special-buffer succeeded.")))
 
-     ((wg-restore-file-buffer buf switch)
-      (when wg-debug
-        (message "wg-restore-file-buffer succeeded.")))
-     (t
-      (wg-restore-default-buffer switch)
-      (when wg-debug
-        (message "wg-restore-default-buffer called.")))))
-    nil)
+       ((setq rlt (wg-restore-file-buffer buf switch))
+        (when wg-debug
+          (message "wg-restore-file-buffer succeeded.")))
+       (t
+        (wg-restore-default-buffer switch)
+        (when wg-debug
+          (message "wg-restore-default-buffer called.")))))
+    rlt))
 
 (defun wg-buffer-uid (buffer-or-name)
   "Return BUFFER-OR-NAME's buffer-local value of `wg-buffer-uid'."
@@ -1247,7 +1258,7 @@ See `wg-buffer-local-variables-alist' for details."
      :name           (buffer-name)
      :file-name      (buffer-file-name)
      :point          (point)
-     :mark           (mark)
+     :mark           (mark t)
      :local-vars     (wg-serialize-buffer-local-variables)
      :special-data   (wg-buffer-special-data buffer))))
 

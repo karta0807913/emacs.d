@@ -1,4 +1,5 @@
 ;; -*- coding: utf-8; lexical-binding: t; -*-
+
 (defun diredext-exec-git-command-in-shell (command &optional arg file-list)
   "Run a shell command `git COMMAND`' on the marked files.
 If no files marked, always operate on current line in dired-mode."
@@ -44,7 +45,7 @@ If no files marked, always operate on current line in dired-mode."
   (push (list pattern program) dired-guess-shell-alist-user))
 
 (with-eval-after-load 'dired-x
-  (my-dired-support-program (if *is-a-mac* "open" (my-guess-mplayer-path))
+  (my-dired-support-program (my-guess-mplayer-path)
                             (my-file-extensions-to-regexp my-media-file-extensions))
 
   (my-dired-support-program (if *unix* "zathura" "open")
@@ -86,20 +87,77 @@ If no files marked, always operate on current line in dired-mode."
                                                             "mht"
                                                             "epub"))))
 
-(defun dired-mode-hook-setup ()
-  "Set up dired."
+(defvar my-dired-new-file-first-dirs
+  '("bt/finished/$"
+    "bt/torrents?/$"
+    "documents?/$"
+    "music/$"
+    "downloads?/$")
+  "Dired directory patterns where newest files are on the top.")
+
+(defun my-dired-mode-hook-setup ()
+  "Set up Dired."
+  (when (cl-find-if (lambda (regexp)
+                      (let ((case-fold-search t))
+                        (string-match regexp default-directory)))
+                my-dired-new-file-first-dirs)
+    (setq dired-actual-switches "-lat"))
+
   (dired-hide-details-mode 1)
+  (diredfl-mode)
+  (unless dired-subdir-alist (dired-build-subdir-alist))
   (local-set-key  "r" 'dired-up-directory)
   (local-set-key  "e" 'my-ediff-files)
   (local-set-key  "/" 'dired-isearch-filenames)
   (local-set-key  "\\" 'diredext-exec-git-command-in-shell))
-(add-hook 'dired-mode-hook 'dired-mode-hook-setup)
+(add-hook 'dired-mode-hook 'my-dired-mode-hook-setup)
 
 ;; https://www.emacswiki.org/emacs/EmacsSession which is easier to use
 ;; See `session-globals-regexp'
 ;; If the variable is named like "*-history", it will be *automatically* saved.
 (defvar my-dired-directory-history nil
   "Recent directories accessed by dired.")
+
+(defvar my-dired-exclude-directory-regexp nil
+  "Dired directories matching this regexp are not added into directory history.")
+
+(defun my-shell-directories-from-fasd ()
+  "Directories from fasd (https://github.com/clvv/fasd) in shell."
+  (and (executable-find "fasd")
+       (my-nonempty-lines (shell-command-to-string "fasd -ld"))))
+
+(defun my-shell-directories-from-z ()
+  "Directories from z (https://github.com/rupa/z) in shell."
+  (mapcar #'car (shellcop-directories-from-z)))
+
+(defvar my-shell-directory-history-function #'my-shell-directories-from-fasd
+  "Return directory history in shell.  Used by `my-recent-directory'.")
+
+(defun my-recent-directory (&optional n)
+  "Goto recent directories.
+If N is not nil, only list directories in current project."
+  (interactive "P")
+  (unless recentf-mode (recentf-mode 1))
+  (let* ((cands (cl-remove-if-not
+                 #'file-exists-p
+                 (delete-dups
+                  (append my-dired-directory-history
+                          (mapcar 'file-name-directory recentf-list)
+                          (and my-shell-directory-history-function
+                               (funcall my-shell-directory-history-function))))))
+         (root-dir (if (ffip-project-root) (file-truename (ffip-project-root)))))
+
+    (when (and n root-dir)
+      ;; return directories in project root
+      (setq cands
+            (cl-remove-if-not (lambda (f) (path-in-directory-p f root-dir)) cands)))
+
+    (when my-dired-exclude-directory-regexp
+      (setq cands
+            (cl-remove-if (lambda (f) (string-match my-dired-exclude-directory-regexp f))
+                          cands)))
+
+    (dired (completing-read "Directories: " cands))))
 
 (with-eval-after-load 'dired
   ;; re-use dired buffer, available in Emacs 28
@@ -155,6 +213,7 @@ If SEARCH-IN-DIR is t, try to find the subtitle by searching in directory."
        ((and search-in-dir
              (file-exists-p subtitle-dir)
              (fboundp 'string-distance))
+        (my-ensure 'find-lisp)
         (let* ((files (find-lisp-find-files-internal subtitle-dir
                                                      (lambda (file dir)
                                                        (and (not (file-directory-p (expand-file-name file dir)))
@@ -181,7 +240,7 @@ If SEARCH-IN-DIR is t, try to find the subtitle by searching in directory."
     "Detect subtitles for mplayer."
     (let* ((rlt (apply orig-func args)))
       (when (and (stringp rlt)
-                 (string-match-p "^mplayer .*-quiet" rlt))
+                 (string-match "^mplayer .*-quiet" rlt))
         ;; append subtitle to mplayer cli
         (setq rlt
               (format "%s %s"
@@ -202,14 +261,22 @@ If SEARCH-IN-DIR is t, try to find the subtitle by searching in directory."
     (let* ((file (dired-get-file-for-visit)))
       (cond
        ((my-binary-file-p file)
-        ;; confirm before opening big file
-        (when (yes-or-no-p "Edit binary file?")
-          (apply orig-func args)))
+        ;; play media file instead of editing it
+        (call-interactively 'dired-do-async-shell-command))
+
        (t
         (when (and (file-directory-p file)
                    ;; don't add directory when user pressing "^" in `dired-mode'
-                   (not (string-match-p "\\.\\." file)))
-          (add-to-list 'my-dired-directory-history file))
+                   (not (string-match "\\.\\." file)))
+          (unless (and my-dired-exclude-directory-regexp
+                       (string-match my-dired-exclude-directory-regexp file))
+            ;; clean up old items in `my-dired-directory-history'
+            ;; before adding new item
+            (setq my-dired-directory-history
+                  (cl-remove-if-not #'file-exists-p my-dired-directory-history))
+
+            ;; add current directory into history
+            (push file my-dired-directory-history)))
         (apply orig-func args)))))
   (advice-add 'dired-find-file :around #'my-dired-find-file-hack)
 
@@ -219,6 +286,8 @@ If SEARCH-IN-DIR is t, try to find the subtitle by searching in directory."
            (arg (nth 1 args))
            (file-list (nth 2 args))
            (first-file (file-truename (and file-list (car file-list)))))
+      (ignore command)
+      (ignore arg)
       (cond
        ((file-directory-p first-file)
         (async-shell-command (format "%s -dvd-device %s dvd://1 dvd://2 dvd://3 dvd://4 dvd://1 dvd://5 dvd://6 dvd://7 dvd://8 dvd://9"
@@ -228,6 +297,7 @@ If SEARCH-IN-DIR is t, try to find the subtitle by searching in directory."
         (apply orig-func args)))))
   (advice-add 'dired-do-async-shell-command :around #'my-dired-do-async-shell-command-hack)
 
+  ;; sort file names (numbered) in dired
   ;; @see https://emacs.stackexchange.com/questions/5649/sort-file-names-numbered-in-dired/5650#5650
   (setq dired-listing-switches "-laGh1v")
   (setq dired-recursive-deletes 'always))
@@ -244,4 +314,6 @@ If SEARCH-IN-DIR is t, try to find the subtitle by searching in directory."
                 "sudo pm-suspend"))))
     (shell-command cmd)))
 
+(defun my-dired-save-current-buffer ()
+  (interactive))
 (provide 'init-dired)

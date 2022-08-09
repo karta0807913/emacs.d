@@ -19,7 +19,7 @@ EVENT is ignored."
   (let* ((beg (nth 0 args))
          (end (nth 1 args)))
     (cond
-     ((not (string-match-p "^complete " (buffer-substring beg end)))
+     ((not (string-match "^complete " (buffer-substring beg end)))
       ;; filter out some weird lines
       nil)
      (t
@@ -67,7 +67,7 @@ EVENT is ignored."
                                                         (delete-region (point) (line-end-position))))
   (define-key evil-insert-state-local-map (kbd "C-k") 'eshell-previous-input)
   (define-key evil-insert-state-local-map (kbd "C-j") 'eshell-next-input)
-  (local-set-key (kbd "C-c C-y") 'hydra-launcher/body)
+  (local-set-key (kbd "C-c C-y") 'my-hydra-launcher/body)
   (local-set-key (kbd "M-n") 'counsel-esh-history))
 (add-hook 'eshell-mode-hook 'eshell-mode-hook-setup)
 
@@ -76,11 +76,6 @@ EVENT is ignored."
 
 ;; always use bash
 (defvar my-term-program "/bin/bash")
-
-;; utf8
-(defun my-term-use-utf8 ()
-  (set-buffer-process-coding-system 'utf-8-unix 'utf-8-unix))
-(add-hook 'term-exec-hook 'my-term-use-utf8)
 ;; }}
 
 ;; {{ hack counsel-browser-history
@@ -103,7 +98,6 @@ EVENT is ignored."
                           (let* ((cli (if (stringp item) item (car item))))
                             (and (string-match (regexp-quote ,input) cli) item)))
                        rlt))))
-    (when (and rlt (> (length rlt) 0)))
     rlt))
 (advice-add 'ivy-history-contents :around #'my-ivy-history-contents-hack)
 ;; }}

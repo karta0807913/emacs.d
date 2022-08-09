@@ -10,5 +10,4 @@
   (add-hook 'python-mode-hook #'flycheck-mode)
   (add-hook 'python-mode-hook #'lsp-deferred))
 
-
 (provide 'init-python)
