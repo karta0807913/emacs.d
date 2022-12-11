@@ -9,25 +9,27 @@
 ^Misc^                    ^Study^                    ^Emms^
 -------------------------------------------------------------------
 [_ss_] Save workgroup     [_w_] Pronounce word       [_R_] Random
-[_ll_] Load workgroup     [_W_] Big words definition [_n_] Next
-[_B_] New bookmark        [_v_] Play big word video  [_p_] Previous
+[_ll_] Load workgroup     [_W_] Big word list        [_n_] Next
+[_B_] New bookmark        [_vi_] Play word's video   [_p_] Previous
 [_m_] Goto bookmark       [_im_] Image of word       [_P_] Pause
-[_bb_] Switch Gnus buffer [_s1_] Pomodoro tiny task  [_S_] Stop
-[_e_] Erase buffer        [_s2_] Pomodoro big task   [_O_] Open
-[_r_] Erase this buffer   [_st_] Pomodoro stop       [_L_] Playlist
-[_f_] Recent file         [_sr_] Pomodoro resume     [_K_] Search
-[_d_] Recent directory    [_sp_] Pomodoro pause      [_F_] filter
-[_z_] Jump around (z.sh)  [_as_] Ascii table         [_E_] replay
-[_bh_] Bash history       [_E_] Typewriter on/off
-[_hh_] Favorite theme     [_V_] Old typewriter
-[_hr_] Random theme
+[_bb_] Switch Gnus buffer [_vv_] Select big word     [_S_] Stop
+[_e_] Erase buffer        [_s1_] Pomodoro tiny task  [_O_] Open
+[_r_] Erase this buffer   [_s2_] Pomodoro big task   [_L_] Playlist
+[_f_] Recent file         [_st_] Pomodoro stop       [_K_] Search
+[_d_] Recent directory    [_sr_] Pomodoro resume     [_F_] filter
+[_z_] Jump around (z.sh)  [_sp_] Pomodoro pause      [_E_] replay
+[_bh_] Bash history       [_as_] Ascii table
+[_hh_] Favorite theme     [_E_] Typewriter on/off
+[_hr_] Random theme       [_V_] Old typewriter
 [_ka_] Kill other buffers
 [_ii_] Imenu
 [_id_] Insert date string
+[_aa_] Adjust subtitle
 [_q_] Quit
 "
-  ("B" bookmark-set)
-  ("m" counsel-bookmark-goto)
+  ("aa" my-srt-offset-subtitles-from-point)
+  ("B" my-bookmark-set)
+  ("m" my-bookmark-goto)
   ("f" my-counsel-recentf)
   ("d" my-recent-directory)
   ("bh" my-insert-bash-history)
@@ -67,9 +69,10 @@
   ;; }}
 
   ("w" mybigword-pronounce-word)
+  ("vv" mybigword-big-words-in-current-window)
   ("im" mybigword-show-image-of-word)
   ("W" my-lookup-bigword-definition-in-buffer)
-  ("v" mybigword-play-video-of-word-at-point)
+  ("vi" mybigword-play-video-of-word-at-point)
   ("bb" dianyou-switch-gnus-buffer)
   ("q" nil :color red))
 
@@ -286,16 +289,17 @@
     "
 ^Misc^                      ^File^              ^Copy Info^
 -----------------------------------------------------------------
-[_vv_] video2mp3           [_R_] Move           [_pp_] Path
+[_vv_] Video => Mp3        [_R_] Move           [_pp_] Path
 [_aa_] Record by mp3       [_cf_] New           [_nn_] Name
 [_zz_] Play wav&mp3        [_rr_] Rename        [_bb_] Base name
 [_sa_] Fetch subtitle(s)   [_C_]  Copy          [_dd_] directory
 [_se_] Extract subtitle    [_rb_] Change base
-[_vv_] Video => Mp3        [_df_] Diff 2 files
-[_aa_] Recording Wav       [_ff_] Find
-[_ee_] Mkv => Srt
+[_aa_] Recording Wav       [_df_] Diff 2 files
+[_ee_] Mkv => Srt          [_ff_] Find
 [_+_] Create directory
+[_mp_] Mplayer extra opts
 "
+    ("mp" my-mplayer-setup-extra-opts)
     ("sa" shenshou-download-subtitle)
     ("se" shenshou-extract-subtitle-from-zip)
     ("pp" (my-copy-file-info 'file-truename))
@@ -404,10 +408,10 @@ _l_ Right    _Z_ reset       _s_wap       _r_ X Right
 _F_ollow     _D_elete Other  _S_ave       max_i_mize
 _SPC_ cancel _o_nly this     _d_elete
 "
-  ("h" windmove-left )
-  ("j" windmove-down )
-  ("k" windmove-up )
-  ("l" windmove-right )
+  ("h" windmove-left)
+  ("j" windmove-down)
+  ("k" windmove-up)
+  ("l" windmove-right)
   ("q" hydra-move-split-left)
   ("w" hydra-move-split-down)
   ("e" hydra-move-split-up)
@@ -415,11 +419,7 @@ _SPC_ cancel _o_nly this     _d_elete
   ("b" ivy-switch-buffer)
   ("f" counsel-find-file)
   ("F" follow-mode)
-  ("a" (lambda ()
-         (interactive)
-         (ace-window 1)
-         (add-hook 'ace-window-end-once-hook
-                   'my-hydra-window/body)))
+  ("a" (ace-window 1))
   ("v" (lambda ()
          (interactive)
          (split-window-right)
@@ -428,18 +428,10 @@ _SPC_ cancel _o_nly this     _d_elete
          (interactive)
          (split-window-below)
          (windmove-down)))
-  ("s" (lambda ()
-         (interactive)
-         (ace-window 4)
-         (add-hook 'ace-window-end-once-hook
-                   'my-hydra-window/body)))
+  ("s" (ace-window 4))
   ("S" save-buffer)
   ("d" delete-window)
-  ("D" (lambda ()
-         (interactive)
-         (ace-window 16)
-         (add-hook 'ace-window-end-once-hook
-                   'my-hydra-window/body)))
+  ("D" (ace-window 16))
   ("o" delete-other-windows)
   ("i" ace-delete-other-windows)
   ("z" (progn
@@ -472,8 +464,9 @@ Git:
 
 "
   ("ri" my-git-rebase-interactive)
-  ("rr" git-gutter-reset-to-default)
+  ("rr" my-git-gutter-reset-to-default)
   ("rh" my-git-gutter-reset-to-head-parent)
+  ("cb" my-git-current-branch)
   ("s" my-git-show-commit)
   ("l" magit-log-buffer-file)
   ("b" magit-show-refs)
@@ -486,11 +479,11 @@ Git:
   ("dr" (magit-diff-range (my-git-commit-id)))
   ("cc" magit-commit-create)
   ("ca" magit-commit-amend)
-  ("nn" my-commit-create)
-  ("na" my-commit-amend)
-  ("ja" (my-commit-amend t))
+  ("nn" my-git-commit-create)
+  ("na" my-git-commit-amend)
+  ("ja" (my-git-commit-amend t))
   ("au" magit-stage-modified)
-  ("Q" git-gutter-toggle)
+  ("Q" my-git-gutter-toggle)
   ("f" my-git-find-file-in-commit)
   ("cr" my-git-cherry-pick-from-reflog)
   ("q" nil))

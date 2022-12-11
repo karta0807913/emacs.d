@@ -109,31 +109,6 @@ If N is 2, list files in my recent 20 commits."
 
 ;; grep by author is bad idea. Too slow
 
-(defun my-build-bookmark-candidate (bookmark)
-  "Re-shape BOOKMARK."
-  (let* ((key (cond
-               ((and (assoc 'filename bookmark) (cdr (assoc 'filename bookmark)))
-                (format "%s (%s)" (car bookmark) (cdr (assoc 'filename bookmark))))
-               ((and (assoc 'location bookmark) (cdr (assoc 'location bookmark)))
-                (format "%s (%s)" (car bookmark) (cdr (assoc 'location bookmark))))
-               (t
-                (car bookmark)))))
-    ;; key will be displayed
-    ;; re-shape the data so full bookmark be passed to ivy-read
-    (cons key bookmark)))
-
-(defun counsel-bookmark-goto ()
-  "Open ANY bookmark."
-  (interactive)
-  (autoload 'bookmark-maybe-load-default-file "bookmark" "" t)
-  (bookmark-maybe-load-default-file)
-  ;; do the real thing
-  (ivy-read "bookmarks:"
-            (delq nil (mapcar #'my-build-bookmark-candidate
-                              (and (boundp 'bookmark-alist)
-                                   bookmark-alist)))
-            :action #'bookmark-jump))
-
 (defun my-insert-bash-history ()
   "Yank the bash history."
   (interactive)
@@ -202,7 +177,8 @@ If N is 2, list files in my recent 20 commits."
                                 (kill-new plain-str)))))
 
 (defun ivy-switch-buffer-matcher-pinyin (regexp candidates)
-  (ivy--switch-buffer-matcher (my-pinyinlib-build-regexp-string regexp) candidates))
+  (my-ensure 'pinyinlib)
+  (ivy--switch-buffer-matcher (pinyinlib-build-regexp-string regexp) candidates))
 
 (defun ivy-switch-buffer-by-pinyin ()
   "Switch to another buffer."

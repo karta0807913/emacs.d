@@ -19,7 +19,6 @@
 (setq *cygwin* (eq system-type 'cygwin) )
 (setq *linux* (or (eq system-type 'gnu/linux) (eq system-type 'linux)) )
 (setq *unix* (or *linux* (eq system-type 'usg-unix-v) (eq system-type 'berkeley-unix)) )
-(setq *emacs27* (>= emacs-major-version 27))
 (setq *emacs28* (>= emacs-major-version 28))
 
 ;; don't GC during startup to save time
@@ -88,13 +87,15 @@
   (require-init 'init-file-type)
   (require-init 'init-elpa)
 
-  ;; for unit test
-  (when my-disable-idle-timer
+  ;; make all packages in "site-lisp/" loadable right now because idle loader
+  ;; are not used and packages need be available on the spot.
+  (when (or my-lightweight-mode-p my-disable-idle-timer)
     (my-add-subdirs-to-load-path (file-name-as-directory my-site-lisp-dir)))
 
   ;; Any file use flyspell should be initialized after init-spelling.el
   (require-init 'init-spelling t)
   (require-init 'init-ibuffer t)
+  (require-init 'init-bookmark)
   (require-init 'init-ivy)
   (require-init 'init-windows)
   (require-init 'init-javascript t)
@@ -164,12 +165,12 @@
   (unless my-lightweight-mode-p
     ;; @see https://www.reddit.com/r/emacs/comments/4q4ixw/how_to_forbid_emacs_to_touch_configuration_files/
     ;; See `custom-file' for details.
-    (setq custom-file (expand-file-name (concat my-emacs-d "custom-set-variables.el")))
+    (setq custom-file (concat my-emacs-d "custom-set-variables.el"))
     (if (file-exists-p custom-file) (load custom-file t t))
 
     ;; my personal setup, other major-mode specific setup need it.
     ;; It's dependent on *.el in `my-site-lisp-dir'
-    (load (expand-file-name "~/.custom.el") t nil)))
+    (my-run-with-idle-timer 1 (lambda () (load "~/.custom.el" t nil)))))
 
 ;; @see https://www.reddit.com/r/emacs/comments/55ork0/is_emacs_251_noticeably_slower_than_245_on_windows/
 ;; Emacs 25 does gc too frequently
@@ -182,6 +183,10 @@
 
 (run-with-idle-timer 4 nil #'my-cleanup-gc)
 
+(message "*** Emacs loaded in %s with %d garbage collections."
+           (format "%.2f seconds"
+                   (float-time (time-subtract after-init-time before-init-time)))
+           gcs-done)
 ;;; Local Variables:
 ;;; no-byte-compile: t
 ;;; End:
