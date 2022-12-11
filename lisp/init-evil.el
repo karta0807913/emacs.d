@@ -619,6 +619,7 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "xo" 'ace-window
   "ff" 'my-toggle-full-window ;; I use WIN+F in i3
   "ip" 'find-file-in-project
+  "iw" 'treemacs-find-file-in-project
   "tt" 'find-file-in-current-directory
   "jj" 'find-file-in-project-at-point
   "kk" 'find-file-in-project-by-selected
@@ -765,7 +766,9 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "ir" 'ivy-resume
   "ww" 'narrow-or-widen-dwim
   "ycr" 'my-yas-reload-all
-  "wf" 'popup-which-function)
+  "wf" 'popup-which-function
+  "eh" 'project-eshell
+  "ed" 'project-eshell-delete)
 ;; }}
 
 ;; {{ Use `SPC` as leader key

@@ -76,4 +76,50 @@ Stay in current window with a prefix argument ARG."
       (treemacs-find-file)
       (treemacs-select-window))))
 
+
+(defun treemacs-find-file-in-project ()
+  (interactive)
+  "Find file in treemacs workspace projects"
+  (let* ((candidates (mapcar
+                      (lambda (project)
+                        (propertize
+                         (treemacs-project->name project)
+                         'project-path (treemacs-project->path project)))
+                      (treemacs-workspace->projects
+                       (treemacs-find-workspace-by-path (buffer-file-name)))))
+         (target-project (when candidates (completing-read "Select Project" candidates))))
+    (when target-project
+      (let ((ffip-project-root (get-text-property 0 'project-path target-project)))
+        (find-file-in-project)))))
+
+(defun project-eshell-get-eshell-name ()
+    (format "eshell<%s>" (my-get-project-root-directory)))
+
+(defun project-eshell (&optional options)
+  "Open a shell at the current project root
+
+OPTIONS is a p-list which has the following option
+reset-pwd: reset shell path to project root if t"
+  (interactive)
+  (let* ((project-root (my-get-project-root-directory))
+         (eshell-buffer-name (project-eshell-get-eshell-name))
+         (buffer (get-buffer eshell-buffer-name)))
+    (unless buffer
+      (setq buffer (eshell eshell-buffer-name))
+      (with-current-buffer buffer
+        (eshell/cd project-root))
+      (switch-to-buffer nil))
+    (when (plist-get options :reset-pwd)
+      (with-current-buffer buffer
+        (eshell/cd project-root)))
+    (select-window
+     (display-buffer-in-side-window buffer (list :side 'bottom)))))
+
+(defun project-eshell-delete ()
+  "Close window opened by project-eshell"
+  (interactive)
+  (project-eshell)
+  (with-current-buffer (get-buffer (project-eshell-get-eshell-name))
+    (delete-window)))
+
 (provide 'init-sidebar)
