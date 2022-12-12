@@ -85,6 +85,11 @@ Stay in current window with a prefix argument ARG."
                         (propertize
                          (treemacs-project->name project)
                          'project-path (treemacs-project->path project)))
+                      (if-let)
+                      (-flatten (mapcar 'treemacs-workspace->projects
+                                        (if-let ((workspace (treemacs-find-workspace-by-path (buffer-file-name))))
+                                            (list workspace)
+                                          (treemacs-workspaces))))
                       (treemacs-workspace->projects
                        (treemacs-find-workspace-by-path (buffer-file-name)))))
          (target-project (when candidates (completing-read "Select Project" candidates))))
