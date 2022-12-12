@@ -155,6 +155,8 @@
     lsp-dart
     lsp-latex
     lsp-java
+    lsp-docker
+    jsonrpc
     dart-mode)
   "Packages to install from melpa-unstable.")
 
@@ -166,7 +168,7 @@
 (setq package-archives
       '(
         ;; uncomment below line if you need use GNU ELPA
-        ;; ("gnu" . "https://elpa.gnu.org/packages/")
+        ("gnu" . "https://elpa.gnu.org/packages/")
         ("melpa" . "https://melpa.org/packages/")
         ("melpa-stable" . "https://stable.melpa.org/packages/")
 

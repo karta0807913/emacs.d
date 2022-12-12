@@ -9,7 +9,7 @@ RUN apt-get update && \
     apt-get install -y wget software-properties-common wget curl git && \
     add-apt-repository -y ppa:kelleyk/emacs && \
     apt-get update && \
-    apt-get install -y emacs27 && \
+    apt-get install -y emacs28 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

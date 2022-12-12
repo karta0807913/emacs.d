@@ -800,8 +800,8 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "ir" 'ivy-resume
   "ww" 'my-narrow-or-widen-dwim
   "wf" 'popup-which-function
-  "eh" 'project-eshell
-  "ed" 'project-eshell-delete)
+  "eh" 'my-project-eshell
+  "ed" 'my-project-eshell-delete)
 ;; }}
 
 ;; {{ Use `SPC` as leader key

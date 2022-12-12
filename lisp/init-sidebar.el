@@ -95,7 +95,7 @@ Stay in current window with a prefix argument ARG."
 (defun project-eshell-get-eshell-name ()
     (format "eshell<%s>" (my-get-project-root-directory)))
 
-(defun project-eshell (&optional options)
+(defun my-project-eshell (&optional options)
   "Open a shell at the current project root
 
 OPTIONS is a p-list which has the following option
@@ -115,10 +115,10 @@ reset-pwd: reset shell path to project root if t"
     (select-window
      (display-buffer-in-side-window buffer (list :side 'bottom)))))
 
-(defun project-eshell-delete ()
-  "Close window opened by project-eshell"
+(defun my-project-eshell-delete ()
+  "Close window opened by my-project-eshell"
   (interactive)
-  (project-eshell)
+  (my-project-eshell)
   (with-current-buffer (get-buffer (project-eshell-get-eshell-name))
     (delete-window)))
 
