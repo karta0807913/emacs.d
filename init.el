@@ -127,6 +127,7 @@
   (require-init 'init-tabnine-capf)
   (require-init 'init-xref)
   (require-init 'company-tabnine)
+  (require-init 'init-graphic)
 
   ;; projectile costs 7% startup time
 
