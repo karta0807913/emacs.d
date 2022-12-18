@@ -59,15 +59,15 @@ RUN apt-get update && \
 
 WORKDIR /home/code
 
+RUN emacs --version
 COPY . .emacs.d
 COPY .custom.el .
-
-RUN emacs --script .emacs.d/init.el && chmod 777 . .emacs.d
 
 ENV PATH $PATH:/go/bin:/usr/local/go/bin
 ENV TERM xterm-256color
 ENV HOME /home/code
-
 ENV LANG C.UTF-8
 
-CMD [ "emacs", "-nw" ]
+RUN emacs --script .emacs.d/init.el && chmod 777 . .emacs.d
+
+CMD [ "emacs" ]
