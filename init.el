@@ -122,6 +122,7 @@
   (require-init 'init-latex)
   (require-init 'init-dart)
   (require-init 'init-java)
+  (require-init 'init-rust)
   (require-init 'init-sidebar)
   (require-init 'init-dap)
   (require-init 'init-tabnine-capf)

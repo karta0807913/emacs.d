@@ -40,10 +40,11 @@ RUN curl -sL https://deb.nodesource.com/setup_17.x | bash - && \
      npm cache clean --force && \
      rm -rf /var/lib/apt/lists/*
 
-ENV GOPATH="/go"
+ENV GOPATH="/go" \
+    PATH=$PATH:/go/bin:/usr/local/go/bin
 
-# gopls and golang-1.17
-RUN wget https://golang.org/dl/go1.18.linux-amd64.tar.gz -O golang.tar.gz && \
+# gopls and golang-1.19.4
+RUN wget https://golang.org/dl/go1.19.4.linux-amd64.tar.gz -O golang.tar.gz && \
     tar -C /usr/local -xzf golang.tar.gz && \
     rm -rf golang.tar.gz && \
     apt-get clean && \
@@ -57,12 +58,26 @@ RUN apt-get update && \
     pip install --no-cache-dir jedi rope yapf pycodestyle pydocstyle python-lsp-server && \
     rm -rf /var/lib/apt/lists/*
 
+# rust 1.66.0
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup-init && \
+    chmod +x rustup-init && \
+    ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.66.0 && \
+    rm rustup-init && \
+    curl -L https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-x86_64-unknown-linux-gnu.gz | gunzip -c - > /usr/local/cargo/bin/rust-analyzer && \
+    chmod +x /usr/local/cargo/bin/rust-analyzer && \
+    rustup component add rustfmt && \
+    apt-get remove -y --auto-remove && \
+    rm -rf /var/lib/apt/lists/*;
+
 WORKDIR /home/code
 
-ENV PATH $PATH:/go/bin:/usr/local/go/bin
-ENV TERM xterm-256color
-ENV HOME /home/code
-ENV LANG C.UTF-8
+ENV TERM=xterm-256color \
+    HOME=/home/code \
+    LANG=C.UTF-8
 
 # font
 RUN curl -L https://github.com/microsoft/cascadia-code/releases/download/v2111.01/CascadiaCode-2111.01.zip > /tmp/CascadiaCode.zip && \
@@ -70,8 +85,7 @@ RUN curl -L https://github.com/microsoft/cascadia-code/releases/download/v2111.0
     cd /tmp/fonts && \
     unzip -u ../CascadiaCode.zip && \
     mv /tmp/fonts/ttf/CascadiaCode.ttf ~/.local/share/fonts && \
-    rm -rf /tmp/fonts/ /tmp/CascadiaCode.zip && \
-    fc-cache -f -v
+    rm -rf /tmp/fonts/ /tmp/CascadiaCode.zip
 
 COPY . .emacs.d
 COPY .custom.el .
