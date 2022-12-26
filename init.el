@@ -128,6 +128,7 @@
   (require-init 'init-xref)
   (require-init 'company-tabnine)
   (require-init 'init-graphic)
+  (require-init 'init-ligature)
 
   ;; projectile costs 7% startup time
 

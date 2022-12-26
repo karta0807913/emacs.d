@@ -59,14 +59,22 @@ RUN apt-get update && \
 
 WORKDIR /home/code
 
-RUN emacs --version
-COPY . .emacs.d
-COPY .custom.el .
-
 ENV PATH $PATH:/go/bin:/usr/local/go/bin
 ENV TERM xterm-256color
 ENV HOME /home/code
 ENV LANG C.UTF-8
+
+# font
+RUN curl -L https://github.com/microsoft/cascadia-code/releases/download/v2111.01/CascadiaCode-2111.01.zip > /tmp/CascadiaCode.zip && \
+    mkdir -p ~/.local/share/fonts/ /tmp/fonts/ && \
+    cd /tmp/fonts && \
+    unzip -u ../CascadiaCode.zip && \
+    mv /tmp/fonts/ttf/CascadiaCode.ttf ~/.local/share/fonts && \
+    rm -rf /tmp/fonts/ /tmp/CascadiaCode.zip && \
+    fc-cache -f -v
+
+COPY . .emacs.d
+COPY .custom.el .
 
 RUN emacs --script .emacs.d/init.el && chmod 777 . .emacs.d
 

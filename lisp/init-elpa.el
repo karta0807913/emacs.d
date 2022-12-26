@@ -157,7 +157,8 @@
     lsp-java
     lsp-docker
     jsonrpc
-    dart-mode)
+    dart-mode
+    ligature)
   "Packages to install from melpa-unstable.")
 
 (defvar melpa-stable-banned-packages nil
@@ -380,6 +381,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (require-package 'lsp-latex)
 (require-package 'lsp-dart)
 (require-package 'lsp-java)
+(require-package 'ligature)
 
 ;; {{ Fixed expiring GNU ELPA keys
 ;; GNU ELPA GPG key will expire on Sep-2019. So we need install this package to
