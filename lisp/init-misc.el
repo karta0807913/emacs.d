@@ -163,6 +163,24 @@ FN checks these characters belong to normal word characters."
     rlt))
 
 (with-eval-after-load 'elec-pair
+  ;; {{ @see https://debbugs.gnu.org/cgi/bugreport.cgi?bug=55340
+  ;; `new-line-indent` disables `electric-indent-mode'
+  (defun my-electric-pair-open-newline-between-pairs-psif-hack (orig-func &rest args)
+    (ignore orig-func args)
+    (when (and (if (functionp electric-pair-open-newline-between-pairs)
+                   (funcall electric-pair-open-newline-between-pairs)
+                 electric-pair-open-newline-between-pairs)
+               (eq last-command-event ?\n)
+               (< (1+ (point-min)) (point) (point-max))
+               (eq (save-excursion
+                     (skip-chars-backward "\t\s")
+                     (char-before (1- (point))))
+                   (matching-paren (char-after))))
+      (save-excursion (newline-and-indent 1))))
+  (advice-add 'electric-pair-open-newline-between-pairs-psif
+              :around
+              #'my-electric-pair-open-newline-between-pairs-psif-hack)
+  ;; }}
   (setq electric-pair-inhibit-predicate 'my-electric-pair-inhibit))
 ;; }}
 
@@ -205,8 +223,7 @@ In each rule, 1st item is default directory, 2nd item is the shell command.")
 (defun my-generic-prog-mode-hook-setup ()
   "Generic programming mode set up."
   (when (buffer-too-big-p)
-    ;; Turn off `linum-mode' when there are more than 5000 lines
-    (linum-mode -1)
+
     (when (my-should-use-minimum-resource)
       (font-lock-mode -1)))
 
@@ -373,14 +390,6 @@ In each rule, 1st item is default directory, 2nd item is the shell command.")
   (message (car (my-nonempty-lines (shell-command-to-string
                                  (concat "mpc "
                                          (if previous "prev" "next")))))))
-;; }}
-
-;; {{start dictionary lookup
-(with-eval-after-load 'sdcv
-  ;; English => Chinese
-  (setq sdcv-dictionary-simple-list '("朗道英汉字典5.0"))
-  ;; WordNet English => English
-  (setq sdcv-dictionary-complete-list '("WordNet")))
 ;; }}
 
 ;; ANSI-escape coloring in compilation-mode
@@ -886,9 +895,9 @@ might be bad."
 		   ;; go to end of word to workaround `nov-mode' bug
 		   (forward-word)
 		   (forward-char -1)
-		   (sdcv-search-input (thing-at-point 'word))))
-  (local-set-key (kbd "w") 'mybigword-pronounce-word)
-  (local-set-key (kbd ";") 'avy-goto-char-2))
+		   (my-dict-complete-definition)))
+  (local-set-key (kbd ";") 'my-hydra-ebook/body)
+  (local-set-key (kbd "w") 'mybigword-big-words-in-current-window))
 (add-hook 'nov-mode-hook 'nov-mode-hook-setup)
 ;; }}
 
@@ -978,20 +987,20 @@ might be bad."
   (setq eldoc-echo-area-use-multiline-p t))
 ;;}}
 
-;; {{ use sdcv dictionary to find big word definition
-(defvar my-sdcv-org-head-level 2)
-(defun my-sdcv-format-bigword (word zipf)
-  "Format WORD and ZIPF using sdcv dictionary."
+;; {{ use dictionary to find big word definition
+(defvar my-dict-org-head-level 2)
+(defun my-dict-format-bigword (word zipf)
+  "Format WORD and ZIPF."
   (let* (rlt def)
-    (local-require 'sdcv)
+    (local-require 'stardict)
     ;; 2 level org format
     (condition-case nil
         (progn
-          (setq def (sdcv-search-with-dictionary word sdcv-dictionary-complete-list) )
+          (setq def (my-dict-search-detail my-dict-complete my-dict-complete-cache) )
           (setq def (replace-regexp-in-string "^-->.*" "" def))
           (setq def (replace-regexp-in-string "[\n\r][\n\r]+" "" def))
           (setq rlt (format "%s %s (%s)\n%s\n"
-                            (make-string my-sdcv-org-head-level ?*)
+                            (make-string my-dict-org-head-level ?*)
                             word
                             zipf
                             def)))
@@ -1002,7 +1011,7 @@ might be bad."
   "Look up big word definitions."
   (interactive)
   (local-require 'mybigword)
-  (let* ((mybigword-default-format-function 'my-sdcv-format-bigword))
+  (let* ((mybigword-default-format-function 'my-dict-format-bigword))
     (mybigword-show-big-words-from-current-buffer)))
 ;; }}
 

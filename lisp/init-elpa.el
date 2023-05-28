@@ -51,6 +51,7 @@
     auto-package-update
     web-mode
     kv
+    helpful ; @see https://github.com/Wilfred/helpful/pull/283, need unstable version
     esxml ; nov is dependent on latest esxml
     nov
     bbdb
@@ -459,7 +460,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
     light-soap-theme
     lush-theme
     madhat2r-theme
-    majapahit-theme
+    majapahit-themes
     material-theme
     minimal-theme
     modus-themes

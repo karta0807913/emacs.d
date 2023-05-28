@@ -8,18 +8,18 @@
   "
 ^Misc^                    ^Study^                    ^Emms^
 -------------------------------------------------------------------
-[_ss_] Save workgroup     [_w_] Pronounce word       [_R_] Random
+[_ss_] Save workgroup     [_vv_] Pronounce word      [_R_] Random
 [_ll_] Load workgroup     [_W_] Big word list        [_n_] Next
 [_B_] New bookmark        [_vi_] Play word's video   [_p_] Previous
 [_m_] Goto bookmark       [_im_] Image of word       [_P_] Pause
-[_bb_] Switch Gnus buffer [_vv_] Select big word     [_S_] Stop
+[_bb_] Switch Gnus buffer [_w_] Select big word      [_S_] Stop
 [_e_] Erase buffer        [_s1_] Pomodoro tiny task  [_O_] Open
 [_r_] Erase this buffer   [_s2_] Pomodoro big task   [_L_] Playlist
 [_f_] Recent file         [_st_] Pomodoro stop       [_K_] Search
 [_d_] Recent directory    [_sr_] Pomodoro resume     [_F_] filter
 [_z_] Jump around (z.sh)  [_sp_] Pomodoro pause      [_E_] replay
 [_bh_] Bash history       [_as_] Ascii table
-[_hh_] Favorite theme     [_E_] Typewriter on/off
+[_hh_] Favorite theme     [_T_] Typewriter on/off
 [_hr_] Random theme       [_V_] Old typewriter
 [_ka_] Kill other buffers
 [_ii_] Imenu
@@ -44,7 +44,7 @@
   ("e" shellcop-erase-buffer)
   ("r" shellcop-reset-with-new-command)
   ("z" shellcop-jump-around)
-  ("E" my-toggle-typewriter)
+  ("T" my-toggle-typewriter)
   ("V" twm/toggle-sound-style)
 
   ;; {{pomodoro
@@ -68,8 +68,8 @@
   ("L" emms-playlist-mode-go)
   ;; }}
 
-  ("w" mybigword-pronounce-word)
-  ("vv" mybigword-big-words-in-current-window)
+  ("vv" mybigword-pronounce-word)
+  ("w" mybigword-big-words-in-current-window)
   ("im" mybigword-show-image-of-word)
   ("W" my-lookup-bigword-definition-in-buffer)
   ("vi" mybigword-play-video-of-word-at-point)
@@ -490,6 +490,17 @@ Git:
 (global-set-key (kbd "C-c C-g") 'my-hydra-git/body)
 ;; }}
 
+(defhydra my-hydra-ebook ()
+  "
+[_v_] Pronounce word
+[_;_] Jump to word
+[_w_] Display bigword in current window
+"
+  ("v" mybigword-pronounce-word)
+  (";" avy-goto-char-2)
+  ("w" mybigword-big-words-in-current-window)
+  ("q" nil))
+
 (defhydra my-hydra-search ()
   "
  ^Search^         ^Dictionary^
@@ -500,8 +511,8 @@ _s_ StackOverflow _d_ dict.org
 _h_ Code
 _m_ Man
 "
-  ("b" sdcv-search-input)
-  ("t" sdcv-search-input+)
+  ("b" my-dict-complete-definition)
+  ("t" my-dict-simple-definition)
   ("d" my-lookup-dict-org)
   ("g" my-w3m-generic-search)
   ("f" my-w3m-search-financial-dictionary)

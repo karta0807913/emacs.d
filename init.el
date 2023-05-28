@@ -141,6 +141,7 @@
   (require-init 'init-essential)
   ;; tools nice to have
   (require-init 'init-misc t)
+  (require-init 'init-dictionary t)
   (require-init 'init-emms t)
 
   (require-init 'init-emacs-w3m t)
