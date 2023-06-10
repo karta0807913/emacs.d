@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 WORKDIR /root
 
@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # install emacs and utils
 RUN apt-get update && \
-    apt-get install -y wget software-properties-common wget curl git && \
+    apt-get install -y wget software-properties-common wget curl git unzip && \
     add-apt-repository -y ppa:kelleyk/emacs && \
     apt-get update && \
     apt-get install -y emacs28 xclip && \
@@ -33,7 +33,7 @@ RUN wget "https://github.com/latex-lsp/texlab/releases/download/v3.3.1/texlab-x8
     rm -f texlab.tar.gz
 
 # nodejs 17 and theia-ide
-RUN curl -sL https://deb.nodesource.com/setup_17.x | bash - && \
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
      apt-get update && apt-get install -y nodejs && \
      npm i -g typescript-language-server && \
      npm i -g typescript && \
@@ -63,13 +63,9 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup-init && \
-    chmod +x rustup-init && \
-    ./rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.66.0 && \
-    rm rustup-init && \
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
     curl -L https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-x86_64-unknown-linux-gnu.gz | gunzip -c - > /usr/local/cargo/bin/rust-analyzer && \
     chmod +x /usr/local/cargo/bin/rust-analyzer && \
-    rustup component add rustfmt && \
     apt-get remove -y --auto-remove && \
     rm -rf /var/lib/apt/lists/*;
 
