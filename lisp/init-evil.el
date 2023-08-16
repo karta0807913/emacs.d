@@ -1063,10 +1063,12 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
 ;; {{ my personal evil optimization which need be manually enabled.
 (defun my-evil-ex-command-completion-at-point ()
   "Completion function for ex command history."
-  (let* ((start (or (get-text-property 0 'ex-index evil-ex-cmd)
-                    (point)))
+  (let* ((start (minibuffer-prompt-end))
          (end (point)))
-    (list start end evil-ex-history :exclusive 'no)))
+    ;; ex cmd like "%s" might be regarded as string format option
+    (when (string= (buffer-substring-no-properties start (1+ start)) "%")
+      (setq start (1+ start)))
+    (list start end evil-ex-history)))
 
 (defun my-search-evil-ex-history ()
   "Search `evil-ex-history' to complete ex command."
@@ -1074,7 +1076,6 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   (let (after-change-functions
         (completion-styles '(substring))
         (completion-at-point-functions '(my-evil-ex-command-completion-at-point)))
-    (evil-ex-update)
     (completion-at-point)
     (remove-text-properties (minibuffer-prompt-end) (point-max) '(face nil evil))))
 
