@@ -5,6 +5,7 @@
 
 (setq create-lockfiles nil) ;; don't create lock files
 (setq visible-bell nil)
+(setq select-enable-clipboard nil)
 
 (when (eq (member "-scriptload" command-line-args) nil)
       (load-theme 'moe-dark t))
