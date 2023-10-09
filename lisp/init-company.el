@@ -81,7 +81,7 @@ In that case, insert the number."
         ;; so company should be case sensitive.
         company-dabbrev-ignore-case nil
         ;; press M-number to choose candidate
-        company-show-numbers t
+        company-show-numbers nil
         company-idle-delay 0
         company-clang-insert-arguments nil
         company-require-match nil
