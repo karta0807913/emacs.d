@@ -326,7 +326,6 @@ COUNT, BEG, END, TYPE is used.  If INCLUSIVE is t, the text object is inclusive.
     (diff-mode . emacs)
     (ffip-diff-mode . normal)
     (neotree-mode . emacs)
-    (w3m-mode . emacs)
     (gud-mode . emacs)
     (help-mode . emacs)
     (eshell-mode . emacs)
@@ -644,6 +643,7 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "pp" 'paste-from-x-clipboard ; used frequently
   "sb" 'my-current-string-beginning
   "se" 'my-current-string-end
+  "su" 'vundo
   "vj" 'my-validate-json-or-js-expression
   "kc" 'kill-ring-to-clipboard
   "fn" 'cp-filename-of-current-buffer
@@ -664,8 +664,6 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "trm" 'get-term
   "tff" 'toggle-frame-fullscreen
   "tfm" 'toggle-frame-maximized
-  "ti" 'fastdef-insert
-  "th" 'fastdef-insert-from-history
   "ci" 'evilnc-comment-or-uncomment-lines
   "cl" 'evilnc-quick-comment-or-uncomment-to-the-line
   "cc" 'evilnc-copy-and-comment-lines
@@ -865,10 +863,8 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "dt" 'my-dict-simple-definition ; summary
   "dd" 'my-lookup-dict-org
   "mm" 'my-lookup-doc-in-man
-  "gg" 'my-w3m-generic-search
-  "gd" 'my-w3m-search-financial-dictionary
-  "gh" 'my-w3m-hacker-search ; code search in all engines with firefox
-  "gq" 'my-w3m-stackoverflow-search)
+  "gh" 'my-browser-hacker-search ; code search in all engines with firefox
+  )
 ;; }}
 
 ;; {{ remember what we searched
