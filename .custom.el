@@ -1,5 +1,6 @@
 (setq line-number-mode t) ;; line number
 (setq my-disable-lazyflymake t)
+(setq my-company-select-by-number-p nil)
 
 (setq scroll-step            1
       scroll-conservatively  10000)

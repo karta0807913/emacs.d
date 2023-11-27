@@ -12,13 +12,17 @@ Stay in current window with a prefix argument ARG."
      :dir-action (dired (treemacs-safe-button-get btn :path))
      :tag-section-action (treemacs--visit-or-expand/collapse-tag-node btn arg nil)
      :tag-action (treemacs--goto-tag btn)
-     :save-window arg
-     :window  (or init-sidebar-previous-window (previous-window))
+     :window-arg arg
+     :window (or init-sidebar-previous-window (previous-window))
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
 
   (defun treemacs-visit-node-split (&optional arg)
-    "Open current file or tag by vertically splitting `next-window'.
-Stay in current window with a prefix argument ARG."
+    "Open current node without performing any window split or window selection.
+The node will be displayed in the window next to treemacs, the exact selection
+is determined by `next-window'.  If the node is already opened in some other
+window then that window will be selected instead.
+Stay in the current window with a single prefix argument ARG, or close the
+treemacs window with a double prefix argument."
     (interactive "P")
     (treemacs--execute-button-action
      :split-function #'evil-window-split
@@ -26,23 +30,26 @@ Stay in current window with a prefix argument ARG."
      :dir-action (dired (treemacs-safe-button-get btn :path))
      :tag-section-action (treemacs--visit-or-expand/collapse-tag-node btn arg nil)
      :tag-action (treemacs--goto-tag btn)
-     :save-window arg
-     :window  (or init-sidebar-previous-window (previous-window))
+     :window-arg arg
+     :window (or init-sidebar-previous-window (previous-window))
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
 
   (defun treemacs-visit-node-no-split (&optional arg)
-    "Open current file or tag within the window the file is already opened in.
-If the file/tag is no visible opened in any window use `next-window' instead.
-Stay in current window with a prefix argument ARG."
+    "Open current node without performing any window split or window selection.
+The node will be displayed in the window next to treemacs, the exact selection
+is determined by `next-window'.  If the node is already opened in some other
+window then that window will be selected instead.
+Stay in the current window with a single prefix argument ARG, or close the
+treemacs window with a double prefix argument."
     (interactive "P")
     (treemacs--execute-button-action
      :file-action (find-file (treemacs-safe-button-get btn :path))
      :dir-action (dired (treemacs-safe-button-get btn :path))
      :tag-section-action (treemacs--visit-or-expand/collapse-tag-node btn arg nil)
      :tag-action (treemacs--goto-tag btn)
-     :save-window arg
+     :window-arg arg
      :ensure-window-split t
-     :window  (or init-sidebar-previous-window (previous-window))
+     :window (or init-sidebar-previous-window (previous-window))
      :no-match-explanation "Node is neither a file, a directory or a tag - nothing to do here."))
   (define-key treemacs-mode-map "j" 'treemacs-next-line)
   (define-key treemacs-mode-map "k" 'treemacs-previous-line)

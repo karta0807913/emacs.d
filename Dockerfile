@@ -6,13 +6,16 @@ RUN sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
 RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get build-dep -y emacs
-RUN apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libtree-sitter-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgconf2-dev libgconf2-dev libgccjit-11-dev libxi-dev curl
+RUN apt-get update && apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgconf2-dev libgconf2-dev libgccjit-11-dev libxi-dev curl mailutils
 WORKDIR /root
-RUN git clone https://github.com/tree-sitter/tree-sitter.git
+RUN git clone --depth 1 --single-branch https://github.com/tree-sitter/tree-sitter.git
+WORKDIR /root/tree-sitter
+RUN make install && cp -L /usr/local/lib/libtree-sitter.so.0 /lib/x86_64-linux-gnu/
+WORKDIR /root
 RUN git clone --depth 1 --single-branch --branch=emacs-29 git://git.sv.gnu.org/emacs.git emacs-29
 WORKDIR /root/emacs-29
 RUN ./autogen.sh
-RUN ./configure --with-mailutils --with-json --with-rsvg --with-cairo --with-xwidgets --with-gconf --with-native-compilation --with-xinput2
+RUN ./configure --with-mailutils --with-json --with-rsvg --with-cairo --with-xwidgets --with-gconf --with-native-compilation --with-xinput2 --with-png --with-jpeg --with-mailutils
 RUN make -j$(nproc)
 RUN make install
 
@@ -24,20 +27,9 @@ WORKDIR /root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# install emacs
-RUN --mount=type=bind,source=/root/emacs-29,target=/root,from=emacs \
-    --mount=type=bind,source=/usr/bin/,target=/usr/bin/,from=emacs,readwrite \
-    --mount=type=bind,source=/lib/x86_64-linux-gnu/,target=/lib/emacs/,from=emacs \
-    --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    sed 's/\/lib\/x86_64-linux-gnu\//\/lib\/emacs\//' libs.txt | xargs -I{} cp --dereference -f {} /lib/x86_64-linux-gnu/ && \
-    rm -rf /usr/bin/glib-compile-schemas && \
-    cp -f /usr/lib/emacs/glib-2.0/glib-compile-schemas /usr/bin/glib-compile-schemas && \
-    mkdir -p /usr/local/share/emacs/29.1.50/etc/charsets && \
-    make install
-
 # install utils
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    apt-get install -y curl git unzip wget xclip binutils libgccjit-11-dev imagemagick
+    apt-get install -y curl git unzip wget xclip binutils libgccjit-11-dev
 
 # chinese support and sudo command
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
@@ -55,13 +47,15 @@ RUN wget "https://github.com/latex-lsp/texlab/releases/download/v3.3.1/texlab-x8
     mv texlab /usr/bin && \
     rm -f texlab.tar.gz
 
-# nodejs 17 and theia-ide
+# nodejs 20 and theia-ide
+# see https://github.com/nodesource/distributions#ubuntu-versions
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    curl -sL https://deb.nodesource.com/setup_18.x | bash - && \
-     apt-get update && apt-get install -y nodejs && \
-     npm i -g typescript-language-server && \
-     npm i -g typescript && \
-     npm cache clean --force
+    apt-get install -y gpg && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | \
+        sudo tee /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && \
+    apt-get install nodejs -y
 
 ENV GOPATH="/go" \
     PATH=$PATH:/go/bin:/usr/local/go/bin
@@ -105,9 +99,22 @@ RUN curl -L https://github.com/microsoft/cascadia-code/releases/download/v2111.0
     mv /tmp/fonts/ttf/CascadiaCode.ttf ~/.local/share/fonts && \
     rm -rf /tmp/fonts/ /tmp/CascadiaCode.zip
 
+# install emacs
+RUN --mount=type=bind,source=/root/emacs-29,target=/home/code,from=emacs \
+    --mount=type=bind,source=/usr/bin/,target=/usr/bin/,from=emacs,readwrite \
+    --mount=type=bind,source=/lib/x86_64-linux-gnu/,target=/lib/emacs/,from=emacs \
+    --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
+    --mount=type=bind,source=/usr/local/share/emacs/,target=/usr/local/share/emacs29/,from=emacs \
+    sed 's/\/lib\/x86_64-linux-gnu\//\/lib\/emacs\//' libs.txt | xargs -I{} cp --dereference -f {} /lib/x86_64-linux-gnu/ && \
+    rm -rf /usr/bin/glib-compile-schemas && \
+    cp -f /usr/lib/emacs/glib-2.0/glib-compile-schemas /usr/bin/glib-compile-schemas && \
+    cp -r /usr/local/share/emacs29/ /usr/local/share/emacs/ && \
+    make install
+
 COPY . .emacs.d
 COPY .custom.el .
 
-RUN emacs --script .emacs.d/init.el && chmod 777 . .emacs.d
+
+RUN emacs --script .emacs.d/init.el && bash -c "emacs --script <(echo \"(package-initialize)(require 'all-the-icons)(all-the-icons-install-fonts t)\")" && chmod 777 . .emacs.d
 
 CMD [ "emacs" ]
