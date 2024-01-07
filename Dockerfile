@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ubuntu:22.04
+ARG BASE_IMAGE=ubuntu:24.04
 
 # emacs 29
 FROM $BASE_IMAGE as emacs
@@ -7,7 +7,7 @@ RUN sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
 RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get build-dep -y emacs
-RUN apt-get update && apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgconf2-dev libgconf2-dev libgccjit-11-dev libxi-dev curl mailutils
+RUN apt-get update && apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgccjit-11-dev libxi-dev curl mailutils
 WORKDIR /root
 RUN git clone --depth 1 --single-branch https://github.com/tree-sitter/tree-sitter.git
 WORKDIR /root/tree-sitter
@@ -19,8 +19,6 @@ RUN ./autogen.sh
 RUN ./configure --with-mailutils --with-json --with-rsvg --with-cairo --with-xwidgets --with-gconf --with-native-compilation --with-xinput2 --with-png --with-jpeg --with-mailutils
 RUN make -j$(nproc)
 RUN make install
-
-RUN ldd /usr/local/bin/emacs | sed 's/.*=> \(.*\) .*/\1/' | grep -v '(' | tee libs.txt
 
 FROM $BASE_IMAGE
 
@@ -37,10 +35,10 @@ RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from
     apt-get install -y language-pack-en language-pack-zh-hant language-selector-common sudo curl && \
     apt-get -y install $(check-language-support)
 
-# clangd 12
+# clangd 17
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    apt-get install -y clangd-12 && \
-    cp /usr/bin/clangd-12 /usr/bin/clangd
+    apt-get install -y clangd-17 && \
+    cp /usr/bin/clangd-17 /usr/bin/clangd
 
 # texlab
 RUN wget "https://github.com/latex-lsp/texlab/releases/download/v3.3.1/texlab-x86_64-linux.tar.gz" -O texlab.tar.gz && \
@@ -73,7 +71,7 @@ RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from
 # python stuff
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
     apt-get install -y python3-pip && \
-    pip install --no-cache-dir jedi rope yapf pycodestyle pydocstyle python-lsp-server
+    pip install --break-system-packages --no-cache-dir jedi rope yapf pycodestyle pydocstyle python-lsp-server
 
 # rust 1.66.0
 ENV RUSTUP_HOME=/usr/local/rustup \
@@ -102,15 +100,20 @@ RUN curl -L https://github.com/microsoft/cascadia-code/releases/download/v2111.0
 
 # install emacs
 RUN --mount=type=bind,source=/root/emacs-29,target=/home/code,from=emacs \
-    --mount=type=bind,source=/usr/bin/,target=/usr/bin/,from=emacs,readwrite \
+    --mount=type=bind,source=/usr/bin/,target=/usr/bin1/,from=emacs,readwrite \
     --mount=type=bind,source=/lib/x86_64-linux-gnu/,target=/lib/emacs/,from=emacs \
     --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
     --mount=type=bind,source=/usr/local/share/emacs/,target=/usr/local/share/emacs29/,from=emacs \
-    sed 's/\/lib\/x86_64-linux-gnu\//\/lib\/emacs\//' libs.txt | xargs -I{} cp --dereference -f {} /lib/x86_64-linux-gnu/ && \
-    rm -rf /usr/bin/glib-compile-schemas && \
+    mv /usr/bin /usr/bin.original && \
+    /usr/bin.original/ln -s /usr/bin1 /usr/bin && \
+    while ldd ./src/emacs | grep 'not found'; \
+    do \
+        ldd ./src/emacs | grep 'not found' | awk '{print $1}' | \
+            xargs -t -I{} cp /lib/emacs/{} /lib/x86_64-linux-gnu/; \
+    done && \
     cp -f /usr/lib/emacs/glib-2.0/glib-compile-schemas /usr/bin/glib-compile-schemas && \
     cp -r /usr/local/share/emacs29/ /usr/local/share/emacs/ && \
-    make install
+    make install && rm /usr/bin && /usr/bin.original/mv /usr/bin.original /usr/bin
 
 COPY . .emacs.d
 COPY .custom.el .
