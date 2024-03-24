@@ -1,0 +1,7 @@
+FROM localhost/my_editor:clang
+
+RUN apt-get update && \
+    apt-get install -y curl && \
+    curl -s https://packagecloud.io/install/repositories/cs50/repo/script.deb.sh | bash && \
+    apt install libcs50 && \
+    rm -rf /var/lib/apt/lists/*

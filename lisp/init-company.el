@@ -4,7 +4,7 @@
 
 ;; evil has already integrated company-mode, see evil-integration.el
 
-(defvar my-company-select-by-number-p t
+(defvar my-company-select-by-number-p nil
   "User can press number key to select company candidate.")
 
 (defvar my-company-zero-key-for-filter nil

@@ -1,5 +1,6 @@
 ARG BASE_IMAGE=ubuntu:22.04
 
+# emacs 29
 FROM $BASE_IMAGE as emacs
 ENV DEBIAN_FRONTEND=noninteractive
 RUN sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
@@ -29,7 +30,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # install utils
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    apt-get install -y curl git unzip wget xclip binutils libgccjit-11-dev
+    apt-get update && apt-get install -y curl git unzip wget xclip binutils libgccjit-11-dev
 
 # chinese support and sudo command
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
@@ -60,9 +61,9 @@ RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from
 ENV GOPATH="/go" \
     PATH=$PATH:/go/bin:/usr/local/go/bin
 
-# gopls and golang-1.20
+# gopls and golang-1.22.1
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    wget https://go.dev/dl/go1.20.linux-amd64.tar.gz -O golang.tar.gz && \
+    wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O golang.tar.gz && \
     tar -C /usr/local -xzf golang.tar.gz && \
     rm -rf golang.tar.gz && \
     /usr/local/go/bin/go install golang.org/x/tools/gopls@latest && \
