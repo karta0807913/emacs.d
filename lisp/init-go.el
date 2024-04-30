@@ -1,7 +1,7 @@
 (with-eval-after-load 'go-mode
   (require 'treesit)
 
-  (defun go-mode-treesit-find-test-ginko-it-function-name-at-point ()
+  (defun go-mode--treesit-find-test-ginko-it-function-name-at-point ()
     (when-let* ((p (treesit-ready-p 'go))
                 (call-expression
                  (treesit-parent-until
@@ -19,7 +19,7 @@
                               ;; children of argument_list
                               (treesit-node-children (car (cdr children)))))))
 
-  (defun go-mode-regex-find-test-t-function-name-at-point ()
+  (defun go-mode--regex-find-test-t-function-name-at-point ()
     (save-excursion
       (evil-backward-section-begin)
       (let ((function-text (buffer-substring-no-properties
@@ -50,29 +50,32 @@
   (defun go-mode-configure ()
     (eval-after-load 'dap-mode (progn  (require 'dap-go) (dap-go-setup))))
 
+  (defun go-mode-run-unit-test ()
+    (interactive)
+    (setq compile-command
+          (let ((ginkgo-it (go-mode--treesit-find-test-ginko-it-function-name-at-point))
+                (regex-t (go-mode--regex-find-test-t-function-name-at-point)))
+            (cond
+             (ginkgo-it
+              (format "ginkgo --focus %s" ginkgo-it))
+             (regex-t
+              (format "go test %s" regex-t))
+             (t
+              "go test ./..."))))
+    (my-compile))
+
   (general-create-definer golang-leader-def
     :prefix ","
     :states '(normal emacs)
     :keymaps 'go-mode-map)
 
   (golang-leader-def
-    "op" (lambda ()
-           (interactive)
-           (setq compile-command
-                 (let ((ginkgo-it (go-mode-treesit-find-test-ginko-it-function-name-at-point))
-                       (regex-t (go-mode-regex-find-test-t-function-name-at-point)))
-                   (cond
-                    (ginkgo-it
-                     (format "ginkgo --focus %s" ginkgo-it))
-                    (regex-t
-                     (format "go test %s" regex-t))
-                    (t
-                     "go test ./..."))))
-           (my-compile)))
+    "op" 'go-mode-run-unit-test)
 
   (add-hook 'go-mode-hook #'flycheck-mode)
   (add-hook 'go-mode-hook #'go-mode-lsp-custon-settings)
 
+  (add-hook 'go-mode-hook #'go-mode-treesit-buffer-hook)
   (add-hook 'go-mode-hook #'lsp-deferred)
   (add-hook 'go-mode-hook #'lsp-go-install-save-hooks)
   (add-hook 'go-mode-hook #'yas-minor-mode)

@@ -1,5 +1,5 @@
 FROM localhost/my_editor:base
 
 RUN apt-get update && \
-    apt-get install -y gcc g++ gdb &&\
+    apt-get install -y gcc g++ gdb bear &&\
     rm -rf /var/lib/apt/lists/*
