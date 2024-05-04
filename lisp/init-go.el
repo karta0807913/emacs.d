@@ -1,6 +1,18 @@
 (with-eval-after-load 'go-mode
   (require 'treesit)
 
+
+  (when (treesit-ready-p 'go)
+    (defun go-beginning-of-defun-treesit (&optional count)
+      (catch 'return
+        (when-let ((ans (treesit-beginning-of-thing "function_declaration")))
+          (throw 'return ans))
+        (treesit-beginning-of-thing "\\(type_declaration\\|import_declaration\\|source_file\\)")))
+
+    (defun go-mode--treesit-begining-of-defun-hook ()
+      (set (make-local-variable 'beginning-of-defun-function) 'go-beginning-of-defun-treesit))
+    (add-hook 'go-mode-hook #'go-mode--treesit-begining-of-defun-hook))
+
   (defun go-mode--treesit-find-test-ginko-it-function-name-at-point ()
     (when-let* ((p (treesit-ready-p 'go))
                 (call-expression
@@ -41,7 +53,7 @@
 
   (defun go-mode-lsp-custon-settings()
     (add-hook 'lsp-mode-hook (lambda ()
-                              (lsp-register-custom-settings
+                               (lsp-register-custom-settings
                                 '(("gopls.completeUnimported" t t)
                                   ("gopls.staticcheck" t t)
                                   ("gopls.completeUnimported" t t))
