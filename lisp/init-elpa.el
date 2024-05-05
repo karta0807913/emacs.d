@@ -157,6 +157,7 @@
     lsp-latex
     lsp-java
     lsp-docker
+    go-mode
     jsonrpc
     dart-mode
     ligature)
