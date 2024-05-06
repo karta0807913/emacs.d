@@ -152,6 +152,7 @@
   ;; use evil mode (vi key binding)
   (require-init 'init-evil) ; init-evil dependent on init-clipboard
   (require-init 'init-pdf)
+  (require-init 'go-struct-tag)
 
   ;; ediff configuration should be last so it can override
   ;; the key bindings in previous configuration
