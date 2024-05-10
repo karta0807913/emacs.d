@@ -86,54 +86,102 @@
           (goto-char (point-max))
           (when (eq ?\) (char-before)) ;; if it has multiple return values
             (backward-sexp)) ;; "func F(...) |(...)" move to here
-          (goto-char (+ (search-backward ")") 1)) ;; "func F(...)| error" move to here
+          (goto-char (+ (or (ignore-errors (search-backward ")")) 0) 1)) ;; "func F(...)| error" move to here
           (backward-sexp) ;; "func F|(...) error" move to here
           (delete-region (point-min) (point)) ;; delete all function keyword and function name.
           (insert "func F") ;; append the function prefix back.
           (let* ((root (treesit-parser-root-node (treesit-parser-create 'go)))
                  (root-children (treesit-node-child root 0))
                  (func-children (treesit-node-children root-children))
-                 (parameters (or
-                              (car (cdr (seq-filter
-                                         (lambda (node)
-                                           (string= "parameter_list" (treesit-node-type node)))
-                                         func-children)))
-                              (seq-find (lambda (node)
-                                          (string= "type_identifier" (treesit-node-type node)))
-                                        func-children))))
-            (cond
-             ((string= "type_identifier" (treesit-node-type parameters))
-              (when (string= "error" (treesit-node-text parameters))
-                `(:node-start ,(treesit-node-start line-node)
-                              :node-end ,(treesit-node-end line-node)
-                              :types ("error")
-                              :names ("err"))))
-             ((string= "parameter_list" (treesit-node-type parameters))
-              (let ((parameters (seq-filter (lambda (node)
-                                              (string= "parameter_declaration" (treesit-node-type node)))
-                                            (treesit-node-children parameters))))
-                `(:node-start ,(treesit-node-start line-node)
-                  :node-end ,(treesit-node-end line-node)
-                  :types ,(mapcar 'yas-snippet--go-mode-get-type-by-treesit-node parameters)
-                  :names ,(mapcar 'yas-snippet--go-mode-get-name-by-treesit-node parameters)))))))))))
+                 (parameters (yas-snippet-go-mode-get-parent-function-return-values (point))))
+            (plist-put
+             (plist-put parameters
+                        :node-start (treesit-node-start line-node))
+             :node-end (treesit-node-end line-node))))))))
+
+(defun yas-snippet--go-mode-get-type-node-by-treesit-node (node)
+  (car (nreverse (treesit-node-children node))))
 
 (defun yas-snippet--go-mode-get-type-by-treesit-node (node)
-  (treesit-node-text
-   (treesit-node-child node 0 "\(pointer_type\|type_identifier\|qualified_type\)")))
+  (treesit-node-text (yas-snippet--go-mode-get-type-node-by-treesit-node node)))
+
+(defun yas-snippet--go-mode-get-name-node-by-treesit-node (node)
+  (seq-find (lambda (node)
+              (string= "identifier" (treesit-node-type node)))
+            (treesit-node-children node)))
 
 (defun yas-snippet--go-mode-get-name-by-treesit-node (node)
   (let* ((children (treesit-node-children node))
          (name (or (treesit-node-text
-                    (seq-find (lambda (node)
-                                (string= "identifier" (treesit-node-type node)))
-                              children))
+                    (yas-snippet--go-mode-get-name-node-by-treesit-node node))
                    (yas-snippet--go-mode-get-type-by-treesit-node node))))
-    (if (string= name "error")
-        "err"
-      name)))
+    (if (string= name "error") "err" name)))
+
+(defun yas-snippet-go-mode-get-default-value (node)
+  (let ((type (treesit-node-type node))
+        (name (treesit-node-text node)))
+    (print type)
+    (cond
+     ((or (string= type "pointer_type")
+          (string= type "slice_type")
+          (string= type "channel_type")
+          (string= type "function_type"))
+      "nil")
+     (t
+      (cond
+       ((or (string= "int" name)
+             (string= "int64" name)
+             (string= "int32" name))
+        "0")
+       ((string= "string" name)
+        "\"\"")
+       ((or (string= "byte" name)
+            (string= "rune" name))
+        "'0'")
+       (t
+        (format "%s{}" (treesit-node-text node))))))))
 
 (defun yas-snippet-go-mode-get-response-name-snippet (names count)
   (setq count (- count 1))
   (string-join
    (mapcar
     (lambda (name) (format "${%d:%s}" (setq count (+ count 1)) name)) names) ", "))
+
+(defun yas-snippet-go-mode-get-parent-function-return-values (pos)
+  (when-let ((func-node (treesit-parent-until
+                         (treesit-node-at pos)
+                         (lambda (node)
+                           (or (string= "function_declaration" (treesit-node-type node))
+                               (string= "func_literal" (treesit-node-type node))))))
+             (return-values (seq-find
+                             (lambda (node)
+                               (when-let ((type (treesit-node-type node)))
+                                 (or (string= "parameter_list" type)
+                                     (string= "pointer_type" type)
+                                     (string= "qualified_type" type)
+                                     (string= "type_identifier" type))))
+                             (nreverse (treesit-node-children func-node)))))
+    (cond
+     ((string= "parameter_list" (treesit-node-type return-values))
+      (let ((parameters (seq-filter
+                         (lambda (node)
+                           (string= "parameter_declaration" (treesit-node-type node)))
+                         (treesit-node-children return-values))))
+        (list
+         :types (mapcar 'yas-snippet--go-mode-get-type-by-treesit-node parameters)
+         :names (mapcar 'yas-snippet--go-mode-get-name-by-treesit-node parameters)
+         :type-nodes (mapcar 'yas-snippet--go-mode-get-node-type-by-treesit-node parameters)
+         :name-nodes (mapcar 'yas-snippet--go-mode-get-name-node-by-treesit-node parameters))
+        ))
+     (t
+      (if (string= "error" (treesit-node-text return-values))
+          (list
+           :types '("error")
+           :names '("err")
+           :type-nodes return-values
+           :name-nodes return-values)
+        (list
+         :types (list (treesit-node-text return-values))
+         :names (list (treesit-node-text return-values))
+         :type-nodes (list return-values)
+         :name-nodes (list return-values)))))))
