@@ -1,7 +1,7 @@
 # -*- mode: snippet -*-
 # name: Only One Return Error
 # key: ?
-# condition: (yas-snippet-go-mode-calling-function-p "?")
+# condition: (yas-snippet-go-mode-can-expand-for-error-check-p "?")
 # type:command
 # --
 

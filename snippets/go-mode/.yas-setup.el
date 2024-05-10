@@ -41,44 +41,37 @@
             (contents (gethash "contents" eldoc)))
       (lsp--render-on-hover-content contents nil)))
 
-
-(defun yas-snippet-go-mode-calling-function-p (&optional expand-key)
-  (if (and (stringp expand-key)
+(defmacro yas-snippet-without-prefix-buffer (expand-key &rest body)
+  "this function only can be used in \"condition\""
+  `(if (and (stringp ,expand-key)
            (string= (buffer-substring-no-properties
-                     (- (point) (length expand-key)) (point))
-                    expand-key))
+                     (- (point) (length ,expand-key)) (point))
+                    ,expand-key))
       (let ((buf (current-buffer))
             (min (point-min))
             (max (point-max))
             (current-point (point)))
         (with-temp-buffer
-          (insert-buffer-substring buf min (- current-point (length expand-key)))
+          (insert-buffer-substring buf min (- current-point (length ,expand-key)))
           (save-excursion
             (insert-buffer-substring buf current-point max))
-          (treesit-parser-create 'go)
-          (yas-snippet--go-mode-calling-function-p)))
-    (yas-snippet--go-mode-calling-function-p)))
+          (progn ,@body)))
+    (progn ,@body)))
 
-(defun yas-snippet--go-mode-calling-function-p ()
+(defun yas-snippet-go-mode-can-expand-for-error-check-p (expand-key)
+  (yas-snippet-without-prefix-buffer
+   expand-key
+   (treesit-parser-create 'go)
+   (yas-snippet-go-mode-calling-function-p)))
+
+(defun yas-snippet-go-mode-calling-function-p ()
   (save-excursion
     (back-to-indentation)
     (if (treesit-thing-at-point "call_expression" 'nested)
         t
       nil)))
 
-(defun yas-snippet-go-mode-get-function-response-name (&optional expend-key)
-  (if (and (stringp expend-key)
-           (string= (buffer-substring-no-properties
-                     (- (point) (length expend-key)) (point))
-                    expend-key))
-      (save-current-buffer
-        (delete-region (- (point) (length expend-key)) (point))
-        (let ((response (yas-snippet--go-mode-get-function-response-name)))
-          (insert-before-markers expend-key)
-          response))
-    (yas-snippet--go-mode-get-function-response-name)))
-
-(defun yas-snippet--go-mode-get-function-response-name ()
+(defun yas-snippet-go-mode-get-function-response-name ()
   (interactive)
   (save-excursion
     (back-to-indentation)
@@ -113,6 +106,7 @@
               (when (string= "error" (treesit-node-text parameters))
                 `(:node-start ,(treesit-node-start line-node)
                               :node-end ,(treesit-node-end line-node)
+                              :types ("error")
                               :names ("err"))))
              ((string= "parameter_list" (treesit-node-type parameters))
               (let ((parameters (seq-filter (lambda (node)
@@ -120,19 +114,20 @@
                                             (treesit-node-children parameters))))
                 `(:node-start ,(treesit-node-start line-node)
                   :node-end ,(treesit-node-end line-node)
+                  :types ,(mapcar 'yas-snippet--go-mode-get-type-by-treesit-node parameters)
                   :names ,(mapcar 'yas-snippet--go-mode-get-name-by-treesit-node parameters)))))))))))
+
+(defun yas-snippet--go-mode-get-type-by-treesit-node (node)
+  (treesit-node-text
+   (treesit-node-child node 0 "\(pointer_type\|type_identifier\|qualified_type\)")))
 
 (defun yas-snippet--go-mode-get-name-by-treesit-node (node)
   (let* ((children (treesit-node-children node))
-         (name (treesit-node-text
-                (or (seq-find (lambda (node)
-                                (string= "identifier" (treesit-node-type node)))
-                              children)
+         (name (or (treesit-node-text
                     (seq-find (lambda (node)
-                                (or
-                                 (string= "type_identifier" (treesit-node-type node))
-                                 (string= "qualified_type" (treesit-node-type node))))
-                              children)))))
+                                (string= "identifier" (treesit-node-type node)))
+                              children))
+                   (yas-snippet--go-mode-get-type-by-treesit-node node))))
     (if (string= name "error")
         "err"
       name)))
