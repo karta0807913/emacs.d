@@ -1,0 +1,26 @@
+# -*- mode: snippet -*-
+# name: Only One Return Error
+# key: ?
+# condition: (yas-snippet-go-mode-calling-function-p "?")
+# type:command
+# --
+
+(when-let* ((plist (yas-snippet-go-mode-get-function-response-name))
+       (names (plist-get plist :names))
+       (node-start (plist-get plist :node-start))
+       (node-end (plist-get plist :node-end))
+       (line (buffer-substring-no-properties node-start node-end))
+       (count (length names))
+       (err (last names)))
+  (goto-char node-start)
+  (delete-region node-start node-end)
+  (if (length= names 1)
+      (yas-expand-snippet
+       (format "if ${1:err} := %s; $1 != nil {\n\treturn ${2:err}\n}"
+               line))
+    (yas-expand-snippet
+     (format "%s := %s\nif $%d != nil {\n\treturn $%d\n}"
+             (yas-snippet-go-mode-get-response-name-snippet names 1)
+             line
+             count
+             count))))

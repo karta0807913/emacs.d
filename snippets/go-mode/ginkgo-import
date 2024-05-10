@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: Import Ginkgo Packages
+# key: import
+# condition: (string-match "_test.go" (buffer-name))
+# --
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("$1", func() {
+	$0
+})

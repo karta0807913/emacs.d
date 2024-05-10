@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: Ginkgo It Test Function
+# key: it
+# condition: (yas-snippet-go-mode-within-ginkgo-context-block-p)
+# --
+It("$1", func(ctx context.Context) {
+	$0
+})

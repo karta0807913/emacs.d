@@ -1,0 +1,9 @@
+# -*- mode: snippet -*-
+# name: httptest Post Request
+# key: post
+# condition: (string-match "_test.go" (buffer-name))
+# --
+
+req, resp := test.NewPostRequest(ctx, "/$1", request), httptest.NewRecorder()
+server.ServeHTTP(resp, req)
+test.ParseSuccessResponse(resp, &${$2:response})
