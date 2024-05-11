@@ -58,6 +58,12 @@
           (progn ,@body)))
     (progn ,@body)))
 
+(defun yas-snippet-go-mode-can-expand-for-return-p (expand-key)
+  (yas-snippet-without-prefix-buffer
+   expand-key
+   (treesit-parser-create 'go)
+   (and (not (yas-snippet-go-mode-calling-function-p)))))
+
 (defun yas-snippet-go-mode-can-expand-for-error-return-p (expand-key)
   (yas-snippet-without-prefix-buffer
    expand-key
@@ -142,7 +148,8 @@ lsp-mode is required for this function."
      ((or (string= type "pointer_type")
           (string= type "slice_type")
           (string= type "channel_type")
-          (string= type "function_type"))
+          (string= type "function_type")
+          (string= name "error"))
       "nil")
      (t
       (cond
@@ -155,7 +162,7 @@ lsp-mode is required for this function."
             (string= "rune" name))
         "'0'")
        (t
-        (format "%s{}" (treesit-node-text node))))))))
+        (format "%s\\{\\}" (treesit-node-text node))))))))
 
 (defun yas-snippet-go-mode-get-response-name-snippet (names count)
   (setq count (- count 1))

@@ -1,0 +1,12 @@
+# -*- mode: snippet -*-
+# name: Return Current Function
+# key: !
+# condition: (yas-snippet-go-mode-can-expand-for-return-p "!")
+# type:command
+# --
+
+(when-let ((func-resp (yas-snippet-go-mode-get-parent-function-return-values (point))))
+  (yas-expand-snippet
+   (format "return %s"
+           (yas-snippet-go-mode-get-response-name-snippet
+            (mapcar 'yas-snippet-go-mode-get-default-value (plist-get func-resp :type-nodes)) 1))))
