@@ -3,7 +3,7 @@ ARG BASE_IMAGE=ubuntu:24.04
 # emacs 29
 FROM $BASE_IMAGE as emacs
 ENV DEBIAN_FRONTEND=noninteractive
-RUN sed -i 's/^# deb-src/deb-src/' /etc/apt/sources.list
+RUN sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
 RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get build-dep -y emacs

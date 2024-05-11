@@ -2,6 +2,9 @@
   (require 'treesit)
   (require 'cl-generic)
   (require 's)
+  (unless (treesit-parser-list)
+    (treesit-parser-create 'go))
+
   (defgroup go-struct-tag nil
     "uses treesit to maintain the golang struct tags")
 
@@ -62,6 +65,8 @@ Return Value: plist of the new tags.
   (cl-defun go-struct-tag-add-struct-tag (&optional &keys
                                                     (namer go-struct-tag-namer-functions)
                                                     (merger go-struct-tag-merger-functions))
+    "add go tag to the end of each struct fields.
+this function will use the custom variable go-struct-tag-namer-functions and go-struct-tag-merger-functions."
     (interactive)
     (when-let* ((root (go-struct-tag--treesit-get-struct-node (point)))
                 (fields-info (go-struct-tag--treesit-get-struct-tag root root namer merger)))
@@ -73,7 +78,7 @@ Return Value: plist of the new tags.
       (let* ((marker (plist-get field :marker))
              (marker-point (marker-position marker))
              (tag-text (plist-get field :tag-text)))
-        (when (not (string-empty-p new-tag))
+        (unless (string-empty-p new-tag)
           (when tag-text
             (delete-region marker-point (+ marker-point (length tag-text))))
           (save-excursion
@@ -260,7 +265,7 @@ Return Value: plist of the new tags.
 
   (defun go-struct-tag--treesit-reduce (list1 list2)
     (while-let ((key (car list2)))
-      (when (not (member key list1))
+      (unless (member key list1)
         (push key list1))
       (setq list2 (cdr list2)))
     list1)
@@ -268,7 +273,7 @@ Return Value: plist of the new tags.
   (defun go-struct-tag-get-plist-keys (plist)
     (let ((ans '()))
       (while-let ((key (car plist)))
-        (when (not (member key ans))
+        (unless (member key ans)
           (push key ans))
         (setq plist (cdr (cdr plist))))
       (nreverse ans)))
@@ -294,7 +299,7 @@ Return Value: plist of the new tags.
             (new-value (plist-get new-tags key)))
         (if-let ((merger (plist-get local-functions key)))
             (setq old-tags (plist-put old-tags key (funcall merger info old-value new-value)))
-          (when (not old-value)
+          (unless old-value
             (setq old-tags (plist-put old-tags key new-value))))
         (setq old-tags
               (go-struct-tag--treesit-merger-function info (cdr keys) old-tags new-tags local-functions))))
@@ -318,22 +323,27 @@ Return Value: plist of the new tags.
            info (cdr (cdr functions))))))
 
   (defun go-struct-tag-snake-case-namer-function (info)
+    "return snake-case name."
     (when-let* ((name (plist-get info :name))
                 (_ (not (string-empty-p name))))
       (s-snake-case name)))
 
   (defun go-struct-tag-gorm-namer-function (info)
+    "returns snake-case name.
+If type name is \"id\", it will add tag \"primaryKey\".
+If type is not pointer_type. it will add tag \"not null\"."
     (when-let* ((name (go-struct-tag-snake-case-namer-function info))
                 (type-node (plist-get info :type-node))
                 (tag-list `(,(format "column:%s" name))))
       (when (string= name "id")
         (push "primaryKey" tag-list)
         (push "autoIncrement" tag-list))
-      (when (not (string= "pointer_type" (treesit-node-type type-node)))
+      (unless (string= "pointer_type" (treesit-node-type type-node))
         (push "not null" tag-list))
       (string-join (nreverse tag-list) ";")))
 
   (defun go-struct-tag-json-namer-function (info)
+    "returns snake-case name. if variable is \"pointer_type\", set omitempty."
     (when-let* ((name (go-struct-tag-snake-case-namer-function info))
                 (type-node (plist-get info :type-node))
                 (tag-list `(,name)))
