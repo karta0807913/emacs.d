@@ -58,11 +58,27 @@
           (progn ,@body)))
     (progn ,@body)))
 
-(defun yas-snippet-go-mode-can-expand-for-error-check-p (expand-key)
+(defun yas-snippet-go-mode-can-expand-for-error-return-p (expand-key)
   (yas-snippet-without-prefix-buffer
    expand-key
    (treesit-parser-create 'go)
-   (yas-snippet-go-mode-calling-function-p)))
+   (and (yas-snippet-go-mode-calling-function-p)
+        (yas-snippet-go-mode-has-error-return-p (point)))))
+
+(defun yas-snippet-go-mode-can-expand-for-error-panic-p (expand-key)
+  (yas-snippet-without-prefix-buffer
+   expand-key
+   (treesit-parser-create 'go)
+   (and (yas-snippet-go-mode-calling-function-p)
+        (not (yas-snippet-go-mode-has-error-return-p (point))))))
+
+(defun yas-snippet-go-mode-has-error-return-p (pos)
+  (if (seq-find (lambda (type)
+                  (string= type "error"))
+                (plist-get (yas-snippet-go-mode-get-parent-function-return-values pos)
+                           :types))
+      t
+    nil))
 
 (defun yas-snippet-go-mode-calling-function-p ()
   (save-excursion
@@ -71,9 +87,11 @@
         t
       nil)))
 
-(defun yas-snippet-go-mode-get-function-response-name ()
-  (interactive)
+(defun yas-snippet-go-mode-get-function-response-at (pos)
+  "Get calling function's response value at POS.
+lsp-mode is required for this function."
   (save-excursion
+    (goto-char pos)
     (back-to-indentation)
     (let* ((line-node (treesit-thing-at-point "call_expression" 'nested))
            (selector (treesit-node-child line-node 1 "selector_expression")))
@@ -120,7 +138,6 @@
 (defun yas-snippet-go-mode-get-default-value (node)
   (let ((type (treesit-node-type node))
         (name (treesit-node-text node)))
-    (print type)
     (cond
      ((or (string= type "pointer_type")
           (string= type "slice_type")
@@ -133,8 +150,7 @@
              (string= "int64" name)
              (string= "int32" name))
         "0")
-       ((string= "string" name)
-        "\"\"")
+       ((string= "string" name) "\"\"")
        ((or (string= "byte" name)
             (string= "rune" name))
         "'0'")
@@ -148,6 +164,15 @@
     (lambda (name) (format "${%d:%s}" (setq count (+ count 1)) name)) names) ", "))
 
 (defun yas-snippet-go-mode-get-parent-function-return-values (pos)
+  "Get parent calling function's return value of POS.
+
+This function returns a plist, which contains
+  :types       a list contains name of return types
+  :names       a list contains name of return names.
+               If name not specific, return the name of types.
+  :type-nodes  a list contains return types (treesit node).
+  :name-nodes  a list contains return names (treesit node).
+                If name not specific, return the node of type."
   (when-let ((func-node (treesit-parent-until
                          (treesit-node-at pos)
                          (lambda (node)
@@ -170,7 +195,7 @@
         (list
          :types (mapcar 'yas-snippet--go-mode-get-type-by-treesit-node parameters)
          :names (mapcar 'yas-snippet--go-mode-get-name-by-treesit-node parameters)
-         :type-nodes (mapcar 'yas-snippet--go-mode-get-node-type-by-treesit-node parameters)
+         :type-nodes (mapcar 'yas-snippet--go-mode-get-type-node-by-treesit-node parameters)
          :name-nodes (mapcar 'yas-snippet--go-mode-get-name-node-by-treesit-node parameters))
         ))
      (t
@@ -185,3 +210,8 @@
          :names (list (treesit-node-text return-values))
          :type-nodes (list return-values)
          :name-nodes (list return-values)))))))
+
+(defun yas-escape-text (text)
+  "Escape TEXT for snippet."
+  (when text
+    (replace-regexp-in-string "[`\\$]" "\\\\\\&" text)))

@@ -7,7 +7,7 @@ RUN sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.so
 RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get build-dep -y emacs
-RUN apt-get update && apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgccjit-11-dev libxi-dev curl mailutils
+RUN apt-get update && apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgccjit-11-dev libxi-dev curl mailutils
 WORKDIR /root
 RUN git clone --depth 1 --single-branch https://github.com/tree-sitter/tree-sitter.git
 WORKDIR /root/tree-sitter

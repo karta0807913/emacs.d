@@ -1,0 +1,27 @@
+# -*- mode: snippet -*-
+# name: Assert Function Returns and Panic
+# key: ?
+# condition: (yas-snippet-go-mode-can-expand-for-error-panic-p "?")
+# type:command
+# --
+
+(if-let ((func-resp (yas-snippet-go-mode-get-function-response-at (point))))
+    (if-let ((err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=))
+               (names (plist-get func-resp :names))
+               (line (yas-escape-text (buffer-substring-no-properties
+                                       (plist-get func-resp :node-start)
+                                       (plist-get func-resp :node-end)))))
+      (if (length= names 1)
+          (yas-expand-snippet
+           (format "if ${1:err} := %s; $1 != nil {\n\tpanic($1)\n}")
+           (plist-get func-resp :node-start)
+           (plist-get func-resp :node-end))
+        (yas-expand-snippet
+         (format "%s := %s\nif $%d != nil {\n\tpanic($%d)\n}"
+                 (yas-snippet-go-mode-get-response-name-snippet names 1)
+                 line
+                 (+ 1 err-idx)
+                 (+ 1 err-idx))
+         (plist-get func-resp :node-start)
+         (plist-get func-resp :node-end)))
+      (print "this function doesn't return any error")))
