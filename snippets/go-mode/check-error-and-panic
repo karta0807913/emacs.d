@@ -13,7 +13,8 @@
                                        (plist-get func-resp :node-end)))))
       (if (length= names 1)
           (yas-expand-snippet
-           (format "if ${1:err} := %s; $1 != nil {\n\tpanic($1)\n}")
+           (format "if ${1:err} := %s; $1 != nil {\n\tpanic($1)\n}"
+           line)
            (plist-get func-resp :node-start)
            (plist-get func-resp :node-end))
         (yas-expand-snippet

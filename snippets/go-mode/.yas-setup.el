@@ -185,14 +185,7 @@ This function returns a plist, which contains
                          (lambda (node)
                            (or (string= "function_declaration" (treesit-node-type node))
                                (string= "func_literal" (treesit-node-type node))))))
-             (return-values (seq-find
-                             (lambda (node)
-                               (when-let ((type (treesit-node-type node)))
-                                 (or (string= "parameter_list" type)
-                                     (string= "pointer_type" type)
-                                     (string= "qualified_type" type)
-                                     (string= "type_identifier" type))))
-                             (nreverse (treesit-node-children func-node)))))
+             (return-values (car (cdr (nreverse (treesit-node-children func-node))))))
     (cond
      ((string= "parameter_list" (treesit-node-type return-values))
       (let ((parameters (seq-filter
@@ -222,3 +215,45 @@ This function returns a plist, which contains
   "Escape TEXT for snippet."
   (when text
     (replace-regexp-in-string "[`\\$]" "\\\\\\&" text)))
+
+(defun yas-snippet-go-mode-check-error-and-return (pos)
+  (when-let* ((plist (yas-snippet-go-mode-get-function-response-at pos))
+              (names (plist-get plist :names))
+              (types (plist-get plist :types))
+              (node-start (plist-get plist :node-start))
+              (node-end (plist-get plist :node-end))
+              (line (yas-escape-text (buffer-substring-no-properties node-start node-end))))
+    (let ((err-idx (cl-position "error" types :test 'string=))
+          (current-function (yas-snippet-go-mode-get-parent-function-return-values pos)))
+      (if err-idx
+          ;; if parent response contains error
+          (let* ((return-type-nodes (plist-get current-function :type-nodes))
+                 (return-name-indexes (mapcar (lambda (type)
+                                                (cl-position type types :test 'string=))
+                                              (plist-get current-function :types))))
+            (let* ((i -1)
+                   (return-names (mapcar (lambda (index)
+                                           (setq i (+ 1 i))
+                                           (or (and index (nth index names))
+                                               (yas-snippet-go-mode-get-default-value (nth i return-type-nodes))))
+                                         return-name-indexes)))
+              (if (length= names 1)
+                  (yas-expand-snippet
+                   (format "if ${1:err} := %s; $1 != nil {\n\treturn %s\n}"
+                           line
+                           (yas-snippet-go-mode-get-response-name-snippet return-names 2))
+                   node-start
+                   node-end)
+                (yas-expand-snippet
+                 (format "%s := %s\nif $%d != nil {\n\treturn %s\n}"
+                         (yas-snippet-go-mode-get-response-name-snippet names 1)
+                         line
+                         err-idx
+                         (yas-snippet-go-mode-get-response-name-snippet return-names (+ 1 (length names))))
+                 node-start
+                 node-end))))
+        ;; if response doesn't have error, list up the parameters.
+        (yas-expand-snippet
+         (format "%s := %s" (yas-snippet-go-mode-get-response-name-snippet names 1) line)
+         node-start
+         node-end)))))
