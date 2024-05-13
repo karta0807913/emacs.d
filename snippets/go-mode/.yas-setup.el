@@ -36,27 +36,27 @@
 
 (defun yas-snippet-go-mode-get-func-doc ()
   (when-let* ((eldoc (lsp-request
-                    "textDocument/hover"
-                    (lsp--text-document-position-params)))
-            (contents (gethash "contents" eldoc)))
-      (lsp--render-on-hover-content contents nil)))
+                      "textDocument/hover"
+                      (lsp--text-document-position-params)))
+              (contents (gethash "contents" eldoc)))
+    (lsp--render-on-hover-content contents nil)))
 
 (defmacro yas-snippet-without-prefix-buffer (expand-key &rest body)
   "this function only can be used in \"condition\""
   `(if (and (stringp ,expand-key)
-           (string= (buffer-substring-no-properties
-                     (- (point) (length ,expand-key)) (point))
-                    ,expand-key))
-      (let ((buf (current-buffer))
-            (min (point-min))
-            (max (point-max))
-            (current-point (point)))
-        (with-temp-buffer
-          (insert-buffer-substring buf min (- current-point (length ,expand-key)))
-          (save-excursion
-            (insert-buffer-substring buf current-point max))
-          (progn ,@body)))
-    (progn ,@body)))
+            (string= (buffer-substring-no-properties
+                      (- (point) (length ,expand-key)) (point))
+                     ,expand-key))
+       (let ((buf (current-buffer))
+             (min (point-min))
+             (max (point-max))
+             (current-point (point)))
+         (with-temp-buffer
+           (insert-buffer-substring buf min (- current-point (length ,expand-key)))
+           (save-excursion
+             (insert-buffer-substring buf current-point max))
+           (progn ,@body)))
+     (progn ,@body)))
 
 (defun yas-snippet-go-mode-can-expand-for-return-p (expand-key)
   (yas-snippet-without-prefix-buffer
@@ -155,8 +155,8 @@ lsp-mode is required for this function."
      (t
       (cond
        ((or (string= "int" name)
-             (string= "int64" name)
-             (string= "int32" name))
+            (string= "int64" name)
+            (string= "int32" name))
         "0")
        ((string= "string" name) "\"\"")
        ((or (string= "byte" name)
