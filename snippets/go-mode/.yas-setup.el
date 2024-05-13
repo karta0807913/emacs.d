@@ -78,6 +78,7 @@
    (and (yas-snippet-go-mode-calling-function-p)
         (not (yas-snippet-go-mode-has-error-return-p (point))))))
 
+(yas-snippet-go-mode-has-error-return-p (point))
 (defun yas-snippet-go-mode-has-error-return-p (pos)
   (if (seq-find (lambda (type)
                   (string= type "error"))
@@ -185,7 +186,10 @@ This function returns a plist, which contains
                          (lambda (node)
                            (or (string= "function_declaration" (treesit-node-type node))
                                (string= "func_literal" (treesit-node-type node))))))
-             (return-values (car (cdr (nreverse (treesit-node-children func-node))))))
+             (return-values (if-let* ((children (nreverse (treesit-node-children func-node)))
+                                      (_ (string= (treesit-node-type (car children)) "block")))
+                                (nth 1 children)
+                              (car children))))
     (cond
      ((string= "parameter_list" (treesit-node-type return-values))
       (let ((parameters (seq-filter
@@ -248,7 +252,7 @@ This function returns a plist, which contains
                  (format "%s := %s\nif $%d != nil {\n\treturn %s\n}"
                          (yas-snippet-go-mode-get-response-name-snippet names 1)
                          line
-                         err-idx
+                         (+ 1 err-idx)
                          (yas-snippet-go-mode-get-response-name-snippet return-names (+ 1 (length names))))
                  node-start
                  node-end))))
