@@ -78,7 +78,6 @@
    (and (yas-snippet-go-mode-calling-function-p)
         (not (yas-snippet-go-mode-has-error-return-p (point))))))
 
-(yas-snippet-go-mode-has-error-return-p (point))
 (defun yas-snippet-go-mode-has-error-return-p (pos)
   (if (seq-find (lambda (type)
                   (string= type "error"))
