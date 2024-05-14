@@ -184,6 +184,7 @@ This function returns a plist, which contains
                          (treesit-node-at pos)
                          (lambda (node)
                            (or (string= "function_declaration" (treesit-node-type node))
+                               (string= "method_declaration" (treesit-node-type node))
                                (string= "func_literal" (treesit-node-type node))))))
              (return-values (if-let* ((children (nreverse (treesit-node-children func-node)))
                                       (_ (string= (treesit-node-type (car children)) "block")))
