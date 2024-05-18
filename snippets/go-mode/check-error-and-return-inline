@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: Assert Function Returns and Return Error Inline
+# key: !
+# condition: (yas-snippet-go-mode-can-expand-for-error-return-p "!")
+# type:command
+# --
+
+(yas-snippet-go-mode-check-error-and-return (point) t)

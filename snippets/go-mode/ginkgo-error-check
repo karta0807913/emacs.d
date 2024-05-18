@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: Ginkgo Check Error
+# key: ?
+# condition: (yas-snippet-go-mode-ginkgo-check-error-p)
+# type:command
+# --
+
+(yas-snippet-go-mode-ginkgo-check-error (point))

@@ -14,6 +14,10 @@
              (string= expression-text "Context")
              (string= expression-text "When")))))
 
+(defun yas-snippet-go-mode-ginkgo-check-error-p ()
+  (and (string-match-p "_test.go$" (buffer-name))
+       (yas-snippet-go-mode-within-ginkgo-block-p)))
+
 (defun yas-snippet-go-mode-within-ginkgo-block-p ()
   (when-let* ((_ (treesit-ready-p 'go))
               (_ (string-match "_test.go" (buffer-name)))
@@ -69,16 +73,17 @@
    expand-key
    (treesit-parser-create 'go)
    (and (yas-snippet-go-mode-calling-function-p)
-        (yas-snippet-go-mode-has-error-return-p (point)))))
+        (yas-snippet-go-mode-parent-has-error-return-p (point)))))
 
 (defun yas-snippet-go-mode-can-expand-for-error-panic-p (expand-key)
-  (yas-snippet-without-prefix-buffer
-   expand-key
-   (treesit-parser-create 'go)
-   (and (yas-snippet-go-mode-calling-function-p)
-        (not (yas-snippet-go-mode-has-error-return-p (point))))))
+  (and (string-match "\\^main.go\\$" (buffer-name))
+       (yas-snippet-without-prefix-buffer
+        expand-key
+        (treesit-parser-create 'go)
+        (and (yas-snippet-go-mode-calling-function-p)
+             (not (yas-snippet-go-mode-parent-has-error-return-p (point)))))))
 
-(defun yas-snippet-go-mode-has-error-return-p (pos)
+(defun yas-snippet-go-mode-parent-has-error-return-p (pos)
   (if (seq-find (lambda (type)
                   (string= type "error"))
                 (plist-get (yas-snippet-go-mode-get-parent-function-return-values pos)
@@ -87,11 +92,17 @@
     nil))
 
 (defun yas-snippet-go-mode-calling-function-p ()
-  (save-excursion
-    (back-to-indentation)
-    (if (treesit-thing-at-point "call_expression" 'nested)
-        t
-      nil)))
+  (and
+   (= ?\) (char-before))
+   (save-excursion
+     (back-to-indentation)
+     (not (string=
+           "block"
+           (treesit-node-type
+            (treesit-parent-until
+             (treesit-node-at (point))
+             (lambda (node)
+               (string-match-p "^\\(call_expression\\|block\\)$" (treesit-node-type node))))))))))
 
 (defun yas-snippet-go-mode-get-function-response-at (pos)
   "Get calling function's response value at POS.
@@ -207,8 +218,8 @@ This function returns a plist, which contains
           (list
            :types '("error")
            :names '("err")
-           :type-nodes return-values
-           :name-nodes return-values)
+           :type-nodes (list return-values)
+           :name-nodes (list return-values))
         (list
          :types (list (treesit-node-text return-values))
          :names (list (treesit-node-text return-values))
@@ -220,7 +231,7 @@ This function returns a plist, which contains
   (when text
     (replace-regexp-in-string "[`\\$]" "\\\\\\&" text)))
 
-(defun yas-snippet-go-mode-check-error-and-return (pos)
+(defun yas-snippet-go-mode-check-error-and-return (pos &optional inline)
   (when-let* ((plist (yas-snippet-go-mode-get-function-response-at pos))
               (names (plist-get plist :names))
               (types (plist-get plist :types))
@@ -241,11 +252,13 @@ This function returns a plist, which contains
                                            (or (and index (nth index names))
                                                (yas-snippet-go-mode-get-default-value (nth i return-type-nodes))))
                                          return-name-indexes)))
-              (if (length= names 1)
+              (if (or (length= names 1) inline)
                   (yas-expand-snippet
-                   (format "if ${1:err} := %s; $1 != nil {\n\treturn %s\n}"
+                   (format "if %s := %s; $%d != nil {\n\treturn %s\n}"
+                           (yas-snippet-go-mode-get-response-name-snippet names 1)
                            line
-                           (yas-snippet-go-mode-get-response-name-snippet return-names 2))
+                           (+ 1 err-idx)
+                           (yas-snippet-go-mode-get-response-name-snippet return-names (+ 1 (length names))))
                    node-start
                    node-end)
                 (yas-expand-snippet
@@ -261,3 +274,65 @@ This function returns a plist, which contains
          (format "%s := %s" (yas-snippet-go-mode-get-response-name-snippet names 1) line)
          node-start
          node-end)))))
+
+(defun yas-snippet-go-mode-check-error-and-panic (pos)
+  (if-let ((func-resp (yas-snippet-go-mode-get-function-response-at pos)))
+      (if-let ((err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=))
+               (names (plist-get func-resp :names))
+               (line (yas-escape-text (buffer-substring-no-properties
+                                       (plist-get func-resp :node-start)
+                                       (plist-get func-resp :node-end)))))
+          (if (length= names 1)
+              (yas-expand-snippet
+               (format "if ${1:err} := %s; $1 != nil {\n\tpanic($1)\n}"
+                       line)
+               (plist-get func-resp :node-start)
+               (plist-get func-resp :node-end))
+            (yas-expand-snippet
+             (format "%s := %s\nif $%d != nil {\n\tpanic($%d)\n}"
+                     (yas-snippet-go-mode-get-response-name-snippet names 1)
+                     line
+                     (+ 1 err-idx)
+                     (+ 1 err-idx))
+             (plist-get func-resp :node-start)
+             (plist-get func-resp :node-end)))
+        (yas-expand-snippet
+         (format "%s := %s" (yas-snippet-go-mode-get-response-name-snippet names 1) line)
+         (plist-get func-resp :node-start)
+         (plist-get func-resp :node-end)))))
+
+(defun yas-snippet-go-mode-ginkgo-check-error (pos &optional inlinep)
+  (if-let ((func-resp (yas-snippet-go-mode-get-function-response-at pos)))
+      (if-let ((err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=))
+               (names (plist-get func-resp :names))
+               (line (yas-escape-text (buffer-substring-no-properties
+                                       (plist-get func-resp :node-start)
+                                       (plist-get func-resp :node-end)))))
+          (cond
+           ((length= names 1)
+            (yas-expand-snippet
+             (format "Expect(%s).To(Succeed())"
+                     line)
+             (plist-get func-resp :node-start)
+             (plist-get func-resp :node-end)))
+           (inlinep
+            (yas-expand-snippet
+             (format "Expect(%s).Error().To(Succeed())"
+                     line)
+             (plist-get func-resp :node-start)
+             (plist-get func-resp :node-end)))
+           (t
+            (yas-expand-snippet
+             (format "%s := %s\nExpect($%d).To(Succeed())\n$0"
+                     (yas-snippet-go-mode-get-response-name-snippet names 1)
+                     line
+                     (+ 1 err-idx))
+             (plist-get func-resp :node-start)
+             (plist-get func-resp :node-end))))
+        (if (length= names 1)
+            (yas-expand-snippet (format "Expect(%s).To($0)" line))
+          (yas-expand-snippet
+           (format "%s := %s\nExpect($1).To($0)"
+                   (yas-snippet-go-mode-get-response-name-snippet names 1) line)
+           (plist-get func-resp :node-start)
+           (plist-get func-resp :node-end))))))

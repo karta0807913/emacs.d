@@ -1,7 +1,7 @@
 # -*- mode: snippet -*-
-# name: Ginkgo Assert Error
-# key: err
+# name: Ginkgo Equal Object
+# key: eq
 # condition: (yas-snippet-go-mode-within-ginkgo-block-p)
 # --
 
-Expect(${1:err}).To(${2:Succeed()})
+Expect($1).To(Equal($0))
