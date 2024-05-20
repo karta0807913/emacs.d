@@ -46,7 +46,9 @@
     (lsp--render-on-hover-content contents nil)))
 
 (defmacro yas-snippet-without-prefix-buffer (expand-key &rest body)
-  "this function only can be used in \"condition\""
+  "This function only can be used in \"condition\".
+The EXPAND-KEY indicates what is current's prefix key. Then create a temp buffer
+And the code in BODY will be executed within the buffer."
   `(if (and (stringp ,expand-key)
             (string= (buffer-substring-no-properties
                       (- (point) (length ,expand-key)) (point))
@@ -199,7 +201,8 @@ This function returns a plist, which contains
                                (string= "func_literal" (treesit-node-type node))))))
              (return-values (if-let* ((children (nreverse (treesit-node-children func-node)))
                                       (_ (string= (treesit-node-type (car children)) "block")))
-                                (nth 1 children)
+                                (when (string= (treesit-node-type (nth 2 children)) "parameter_list")
+                                  (nth 1 children))
                               (car children))))
     (cond
      ((string= "parameter_list" (treesit-node-type return-values))
