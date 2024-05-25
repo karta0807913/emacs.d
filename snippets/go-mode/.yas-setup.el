@@ -77,6 +77,13 @@ And the code in BODY will be executed within the buffer."
    (and (yas-snippet-go-mode-calling-function-p)
         (yas-snippet-go-mode-parent-has-error-return-p (point)))))
 
+(defun yas-snippet-go-mode-can-expand-for-error-check-p (expand-key)
+  (and (yas-snippet-without-prefix-buffer
+        expand-key
+        (treesit-parser-create 'go)
+        (and (yas-snippet-go-mode-calling-function-p)
+             (not (yas-snippet-go-mode-parent-has-error-return-p (point)))))))
+
 (defun yas-snippet-go-mode-can-expand-for-error-panic-p (expand-key)
   (and (string-match "\\^main.go\\$" (buffer-name))
        (yas-snippet-without-prefix-buffer
@@ -93,18 +100,49 @@ And the code in BODY will be executed within the buffer."
       t
     nil))
 
+(defun yas-snippet-go-mode-get-call-expression-node (node)
+  (cond
+   ((string= "short_var_declaration" (treesit-node-type node))
+    (when-let* ((right-value-children
+                 (treesit-node-children
+                  (seq-find (lambda (node)
+                              (string= (treesit-node-type node) "expression_list"))
+                            (nreverse (treesit-node-children node)))))
+                (_ (length= right-value-children 1))
+                (right-value (car right-value-children))
+                (_ (string= (treesit-node-type right-value) "call_expression")))
+      right-value))
+   (t nil)))
+
+(yas-snippet-go-mode-calling-function-p)
 (defun yas-snippet-go-mode-calling-function-p ()
   (and
    (= ?\) (char-before))
    (save-excursion
      (back-to-indentation)
-     (not (string=
-           "block"
-           (treesit-node-type
-            (treesit-parent-until
-             (treesit-node-at (point))
-             (lambda (node)
-               (string-match-p "^\\(call_expression\\|block\\)$" (treesit-node-type node))))))))))
+     (let ((parent (treesit-parent-until
+                    (treesit-node-at (point))
+                    (lambda (node)
+                      (string-match-p "^\\(call_expression\\|block\\|short_var_declaration\\)$" (treesit-node-type node))))))
+       (cond
+        ((string= "block" (treesit-node-type parent))
+         nil)
+        ((string= "call_expression" (treesit-node-type parent))
+         t)
+        ((string= "short_var_declaration" (treesit-node-type parent))
+         (yas-snippet-go-mode-get-call-expression-node parent))
+        (t nil))))))
+
+(defun yas-snippet-go-mode-remove-left-value (pos)
+    (goto-char pos)
+    (back-to-indentation)
+    (when-let* ((parent (treesit-parent-until
+                         (treesit-node-at (point))
+                         (lambda (node)
+                           (string= "short_var_declaration" (treesit-node-type node)))))
+                (text (treesit-node-text (yas-snippet-go-mode-get-call-expression-node parent))))
+      (delete-region (treesit-node-start parent) (treesit-node-end parent))
+      (insert text)))
 
 (defun yas-snippet-go-mode-get-function-response-at (pos)
   "Get calling function's response value at POS.
@@ -234,15 +272,17 @@ This function returns a plist, which contains
   (when text
     (replace-regexp-in-string "[`\\$]" "\\\\\\&" text)))
 
-(defun yas-snippet-go-mode-check-error-and-return (pos &optional inline)
-  (when-let* ((plist (yas-snippet-go-mode-get-function-response-at pos))
+(defun yas-snippet-go-mode-check-error-and-return (pos &optional inlinep)
+  (goto-char pos)
+  (yas-snippet-go-mode-remove-left-value (point))
+  (when-let* ((plist (yas-snippet-go-mode-get-function-response-at (point)))
               (names (plist-get plist :names))
               (types (plist-get plist :types))
               (node-start (plist-get plist :node-start))
               (node-end (plist-get plist :node-end))
               (line (yas-escape-text (buffer-substring-no-properties node-start node-end))))
     (let ((err-idx (cl-position "error" types :test 'string=))
-          (current-function (yas-snippet-go-mode-get-parent-function-return-values pos)))
+          (current-function (yas-snippet-go-mode-get-parent-function-return-values (point))))
       (if err-idx
           ;; if parent response contains error
           (let* ((return-type-nodes (plist-get current-function :type-nodes))
@@ -255,7 +295,7 @@ This function returns a plist, which contains
                                            (or (and index (nth index names))
                                                (yas-snippet-go-mode-get-default-value (nth i return-type-nodes))))
                                          return-name-indexes)))
-              (if (or (length= names 1) inline)
+              (if (or (length= names 1) inlinep)
                   (yas-expand-snippet
                    (format "if %s := %s; $%d != nil {\n\treturn %s\n}"
                            (yas-snippet-go-mode-get-response-name-snippet names 1)
@@ -279,7 +319,9 @@ This function returns a plist, which contains
          node-end)))))
 
 (defun yas-snippet-go-mode-check-error-and-panic (pos)
-  (if-let ((func-resp (yas-snippet-go-mode-get-function-response-at pos)))
+  (goto-char pos)
+  (yas-snippet-go-mode-remove-left-value (point))
+  (if-let ((func-resp (yas-snippet-go-mode-get-function-response-at (point))))
       (if-let ((err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=))
                (names (plist-get func-resp :names))
                (line (yas-escape-text (buffer-substring-no-properties
@@ -301,6 +343,42 @@ This function returns a plist, which contains
              (plist-get func-resp :node-end)))
         (yas-expand-snippet
          (format "%s := %s" (yas-snippet-go-mode-get-response-name-snippet names 1) line)
+         (plist-get func-resp :node-start)
+         (plist-get func-resp :node-end)))))
+
+(defun yas-snippet-go-mode-check-error (pos &optional inlinep)
+  (goto-char pos)
+  (yas-snippet-go-mode-remove-left-value (point))
+  (if-let ((func-resp (yas-snippet-go-mode-get-function-response-at (point))))
+      (if-let ((err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=))
+               (names (plist-get func-resp :names))
+               (line (yas-escape-text (buffer-substring-no-properties
+                                       (plist-get func-resp :node-start)
+                                       (plist-get func-resp :node-end)))))
+          (if (or  (length= names 1) inlinep)
+              (yas-expand-snippet
+                   (format "if %s := %s; $%d != nil {\n\t$0\n}"
+                           (yas-snippet-go-mode-get-response-name-snippet names 1)
+                           line
+                           (+ 1 err-idx)
+                           (yas-snippet-go-mode-get-response-name-snippet names (+ 1 (length names))))
+                   (plist-get func-resp :node-start)
+                   (plist-get func-resp :node-end))
+            (yas-expand-snippet
+             (format "%s := %s\nif $%d != nil {\n\t$0\n}"
+                     (yas-snippet-go-mode-get-response-name-snippet names 1)
+                     line
+                     (+ 1 err-idx)
+                     (+ 1 err-idx))
+             (plist-get func-resp :node-start)
+             (plist-get func-resp :node-end)))
+        (yas-expand-snippet
+         (format "%s := %s"
+                 (yas-snippet-go-mode-get-response-name-snippet
+                  (plist-get func-resp :names) 1)
+                 (yas-escape-text (buffer-substring-no-properties
+                                   (plist-get func-resp :node-start)
+                                   (plist-get func-resp :node-end))))
          (plist-get func-resp :node-start)
          (plist-get func-resp :node-end)))))
 
@@ -339,3 +417,11 @@ This function returns a plist, which contains
                    (yas-snippet-go-mode-get-response-name-snippet names 1) line)
            (plist-get func-resp :node-start)
            (plist-get func-resp :node-end))))))
+
+(defun test ()
+  (interactive)
+  (treesit-parent-until
+   (treesit-node-at (point))
+   (lambda (node)
+     (print (treesit-node-type node))
+     nil)))

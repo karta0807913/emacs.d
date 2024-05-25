@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: Assert Function Returns
+# key: ?
+# condition: (yas-snippet-go-mode-can-expand-for-error-check-p "?")
+# type:command
+# --
+
+(yas-snippet-go-mode-check-error (point))
