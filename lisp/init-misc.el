@@ -206,7 +206,7 @@ FN checks these characters belong to normal word characters."
   (setq electric-pair-inhibit-predicate 'my-electric-pair-inhibit))
 ;; }}
 
-(defvar my-disable-lazyflymake nil
+(defvar my-disable-lazyflymake t
   "Disable lazyflymake.")
 
 ;; {{
@@ -241,8 +241,6 @@ In each rule, 1st item is default directory, 2nd item is the shell command.")
     ;; do nothing, can't run ctags too often
     )))
 ;; }}
-
-(add-hook 'text-mode-hook #'lazyflymake-start)
 
 ;;; {{ display long lines in truncated style (end line with $)
 (defun my-truncate-lines-setup ()
