@@ -13,8 +13,8 @@ RUN git clone --depth 1 --single-branch https://github.com/tree-sitter/tree-sitt
 WORKDIR /root/tree-sitter
 RUN make install && cp -L /usr/local/lib/libtree-sitter.so.0 /lib/x86_64-linux-gnu/
 WORKDIR /root
-RUN git clone --depth 1 --single-branch --branch=emacs-29 git://git.sv.gnu.org/emacs.git emacs-29
-WORKDIR /root/emacs-29
+RUN git clone --depth 1 --single-branch --branch=emacs-30 git://git.sv.gnu.org/emacs.git emacs-30
+WORKDIR /root/emacs-30
 RUN ./autogen.sh
 RUN ./configure --with-mailutils --with-json --with-rsvg --with-cairo --with-xwidgets --with-gconf --with-native-compilation --with-xinput2 --with-png --with-jpeg --with-mailutils
 RUN make -j$(nproc)
@@ -99,11 +99,12 @@ RUN curl -L https://github.com/microsoft/cascadia-code/releases/download/v2111.0
     rm -rf /tmp/fonts/ /tmp/CascadiaCode.zip
 
 # install emacs
-RUN --mount=type=bind,source=/root/emacs-29,target=/home/code,from=emacs \
+RUN --mount=type=bind,source=/root/emacs-30,target=/home/code,from=emacs \
+    --mount=type=bind,source=/root/emacs-30,target=/root/emacs-30,from=emacs \
     --mount=type=bind,source=/usr/bin/,target=/usr/bin1/,from=emacs,readwrite \
     --mount=type=bind,source=/lib/x86_64-linux-gnu/,target=/lib/emacs/,from=emacs \
     --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    --mount=type=bind,source=/usr/local/share/emacs/,target=/usr/local/share/emacs29/,from=emacs \
+    --mount=type=bind,source=/usr/local/share/emacs/,target=/usr/local/share/emacs-30/,from=emacs \
     mv /usr/bin /usr/bin.original && \
     /usr/bin.original/ln -s /usr/bin1 /usr/bin && \
     while ldd ./src/emacs | grep 'not found'; \
@@ -112,7 +113,7 @@ RUN --mount=type=bind,source=/root/emacs-29,target=/home/code,from=emacs \
             xargs -t -I{} cp /lib/emacs/{} /lib/x86_64-linux-gnu/; \
     done && \
     cp -f /usr/lib/emacs/glib-2.0/glib-compile-schemas /usr/bin/glib-compile-schemas && \
-    cp -r /usr/local/share/emacs29/ /usr/local/share/emacs/ && \
+    cp -r /usr/local/share/emacs-30/ /usr/local/share/emacs/ && \
     make install && rm /usr/bin && /usr/bin.original/mv /usr/bin.original /usr/bin
 
 COPY . .emacs.d

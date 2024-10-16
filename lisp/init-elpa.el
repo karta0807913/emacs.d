@@ -157,9 +157,10 @@
     lsp-latex
     lsp-java
     lsp-docker
-    go-mode
     jsonrpc
     dart-mode
+    go-mode
+    gptel
     ligature)
   "Packages to install from melpa-unstable.")
 
@@ -397,6 +398,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (require-package 'org-re-reveal)
 
 (require-package 'git-modes)
+(require-package 'magit)
 (require-package 'ace-pinyin)
 (require-package 'which-key)
 (require-package 'highlight-symbol)
@@ -409,10 +411,6 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (require-package 'ob-sagemath)
 (require-package 'pulseaudio-control)
 (require-package 'vterm)
-
-;; magit sometime use packages which not released yet
-;; so we place it at the end to make sure other packages are installed first
-(require-package 'magit)
 
 (defvar my-color-themes
   '(afternoon-theme

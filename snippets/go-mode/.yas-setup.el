@@ -114,7 +114,6 @@ And the code in BODY will be executed within the buffer."
       right-value))
    (t nil)))
 
-(yas-snippet-go-mode-calling-function-p)
 (defun yas-snippet-go-mode-calling-function-p ()
   (and
    (= ?\) (char-before))
