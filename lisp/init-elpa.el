@@ -145,6 +145,7 @@
     keyfreq
     gitconfig-mode
     textile-mode
+    w3m
     workgroups2
     zoutline
     company-c-headers
@@ -171,7 +172,6 @@
 ;; dependency on 3rd party web site.
 (setq package-archives
       '(
-        ;; uncomment below line if you need use GNU ELPA
         ("gnu" . "https://elpa.gnu.org/packages/")
         ("melpa" . "https://melpa.org/packages/")
         ("melpa-stable" . "https://stable.melpa.org/packages/")
@@ -180,14 +180,14 @@
         ;; is slow or shutdown.
 
         ;; ;; {{ Option 1: 163 mirror repository:
-        ;; ;; ("gnu" . "https://mirrors.163.com/elpa/gnu/")
+        ;; ("gnu" . "https://mirrors.163.com/elpa/gnu/")
         ;; ("melpa" . "https://mirrors.163.com/elpa/melpa/")
         ;; ("melpa-stable" . "https://mirrors.163.com/elpa/stable-melpa/")
         ;; ;; }}
 
         ;; ;; {{ Option 2: tsinghua mirror repository
         ;; ;; @see https://mirror.tuna.tsinghua.edu.cn/help/elpa/ on usage:
-        ;; ;; ("gnu"   . "http://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+        ;; ("gnu"   . "http://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
         ;; ("melpa" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")
         ;; ("melpa-stable" . "http://mirrors.tuna.tsinghua.edu.cn/elpa/stable-melpa/")
         ;; }}
@@ -205,9 +205,6 @@ You still need modify `package-archives' in \"init-elpa.el\" to PERMANENTLY use 
 
 ;; Un-comment below line if you follow "Install stable version in easiest way"
 ;; (setq package-archives '(("myelpa" . "~/myelpa/")))
-
-;; my local repository is always needed.
-(push (cons "localelpa" (concat my-emacs-d "localelpa/")) package-archives)
 
 (defun my-package-generate-autoloads-hack (pkg-desc pkg-dir)
   "Stop package.el from leaving open autoload files lying around."
@@ -262,6 +259,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 ;; Fire up package.el and ensure the following packages are installed.
 ;;------------------------------------------------------------------------------
 
+(require-package 'compat)
 (require-package 'async)
 ; color-theme 6.6.1 in elpa is buggy
 (require-package 'amx)
@@ -310,6 +308,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (require-package 'winum)
 (require-package 'session)
 (require-package 'unfill)
+(require-package 'w3m) ; better than eww for reading web page
 (require-package 'counsel-gtags)
 (require-package 'eww-lnum)
 (require-package 'buffer-move)
@@ -477,7 +476,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
     obsidian-theme
     occidental-theme
     oldlace-theme
-    omtose-phellack-theme
+    omtose-phellack-themes
     organic-green-theme
     phoenix-dark-mono-theme
     phoenix-dark-pink-theme
@@ -535,3 +534,4 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (setq kill-buffer-query-functions (delq 'process-kill-buffer-query-function kill-buffer-query-functions))
 
 (provide 'init-elpa)
+;;; init-elpa.el ends here

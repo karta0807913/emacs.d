@@ -102,7 +102,8 @@ If the character before and after CH is space or tab, CH is NOT slash"
       (save-excursion
         (forward-char)
         (setq postfix-ch (following-char))))
-    (if (and (not (or (= prefix-ch 32) (= postfix-ch 32)))
+    (if (and (not (or (and prefix-ch (= prefix-ch 32))
+                      (and postfix-ch (= postfix-ch 32))))
              (or (= ch 47) (= ch 92)) )
         (setq rlt t))
     rlt))
@@ -648,6 +649,7 @@ If N > 0 and in js, only occurrences in current N lines are renamed."
   "kc" 'kill-ring-to-clipboard
   "fn" 'cp-filename-of-current-buffer
   "fp" 'cp-fullpath-of-current-buffer
+  "rp" 'cp-root-relative-path-of-current-buffer
   "dj" 'dired-jump ;; open the dired from current file
   "xo" 'ace-window
   "ff" 'my-toggle-full-window ;; I use WIN+F in i3

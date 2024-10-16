@@ -241,8 +241,9 @@ If HINT is empty, use symbol at point."
 
 (defun my-file-too-big-p (file)
   "Test if FILE is too big."
-  (> (nth 7 (file-attributes file))
-     (* 5000 64)))
+  (let ((file-size (nth 7 (file-attributes file))))
+    ;; file might not exist
+    (and file-size (> file-size (* 5000 64)))))
 
 (defvar my-force-buffer-file-temp-p nil)
 (defun my-buffer-file-temp-p ()
@@ -715,7 +716,7 @@ Copied from 3rd party package evil-textobj."
   "Visible window list."
   (cl-mapcan #'my-list-windows-in-frame (visible-frame-list)))
 
-(defun my-lisp-find-file-or-directory (root regexp prefer-directory-p)
+(defun my-lisp-find-file-or-directory (root regexp &optional prefer-directory-p)
   "Find files or directories in ROOT whose names match REGEXP.
 If PREFER-DIRECTORY-P is t, return directory; or else, returns file.
 This function is written in pure Lisp and slow."
