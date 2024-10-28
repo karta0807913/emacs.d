@@ -366,7 +366,6 @@ In each rule, 1st item is default directory, 2nd item is the shell command.")
   "Set up mini buffer."
   (local-set-key (kbd "M-y") 'paste-from-x-clipboard)
   (local-set-key (kbd "C-k") 'kill-line)
-  (subword-mode 1) ; enable sub-word movement in minibuffer
   (setq gc-cons-threshold most-positive-fixnum))
 
 (defun my-minibuffer-exit-hook ()
@@ -1288,9 +1287,6 @@ MATCH is optional tag match."
 
     ;; don't spell check double words
     (setq-local wucuo-flyspell-check-doublon nil)
-    ;; @see http://emacsredux.com/blog/2013/04/21/camelcase-aware-editing/
-    (unless (derived-mode-p 'js2-mode)
-      (subword-mode 1))
 
     ;; now css-mode derives from prog-mode
     ;; see the code of `counsel-css-imenu-setup'
