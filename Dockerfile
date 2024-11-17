@@ -1,19 +1,35 @@
 ARG BASE_IMAGE=ubuntu:24.04
 
-# emacs 29
+FROM ubuntu:20.04 as webkit2gtk
+ENV DEBIAN_FRONTEND=noninteractive
+WORKDIR /
+RUN apt update && apt install -y libwebkit2gtk-4.0-dev
+
+# emacs 30
 FROM $BASE_IMAGE as emacs
 ENV DEBIAN_FRONTEND=noninteractive
 RUN sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
 RUN apt-get update
 RUN apt-get install -y build-essential
 RUN apt-get build-dep -y emacs
-RUN apt-get update && apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgccjit-11-dev libxi-dev curl mailutils
+RUN apt-get update && apt-get install -y libjansson-dev xaw3dg-dev libc6-dev libjpeg-turbo8-dev libncurses5-dev libpng-dev git libtiff5-dev libgif-dev xaw3dg-dev zlib1g-dev libx11-dev libsqlite3-dev libwebp-dev libxpm-dev libxft-dev libotf-dev libfreetype-dev libgccjit-11-dev libxi-dev curl mailutils libwebkit2gtk-4.1-dev
+
 WORKDIR /root
 RUN git clone --depth 1 --single-branch https://github.com/tree-sitter/tree-sitter.git
 WORKDIR /root/tree-sitter
-RUN make install && cp -L /usr/local/lib/libtree-sitter.so.0 /lib/x86_64-linux-gnu/
+RUN make install && cp /usr/local/lib/libtree-sitter.so /usr/local/lib/libtree-sitter.so.* /lib/x86_64-linux-gnu/
 WORKDIR /root
-RUN git clone --depth 1 --single-branch --branch=emacs-30 git://git.sv.gnu.org/emacs.git emacs-30
+
+RUN git clone --depth 1 --single-branch --branch=emacs-30.0.92 git://git.sv.gnu.org/emacs.git emacs-30
+
+# get old webkit from ubuntu20.04
+COPY ./docker/load-deps.sh .
+RUN --mount=type=bind,source=/usr/lib/x86_64-linux-gnu,target=/ubuntu20,from=webkit2gtk \
+    bash ./load-deps.sh "/ubuntu20/libwebkit2gtk-4.0.so.37";
+
+COPY --from=webkit2gtk /usr/include/webkitgtk-4.0 /usr/include/webkitgtk-4.0
+COPY --from=webkit2gtk /usr/include/libsoup-2.4/ /usr/include/libsoup-2.4/
+
 WORKDIR /root/emacs-30
 RUN ./autogen.sh
 RUN ./configure --with-mailutils --with-json --with-rsvg --with-cairo --with-xwidgets --with-gconf --with-native-compilation --with-xinput2 --with-png --with-jpeg --with-mailutils
@@ -61,7 +77,7 @@ ENV GOPATH="/go" \
 
 # gopls and golang-1.22.1
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
-    wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O golang.tar.gz && \
+    wget https://go.dev/dl/go1.23.2.linux-amd64.tar.gz -O golang.tar.gz && \
     tar -C /usr/local -xzf golang.tar.gz && \
     rm -rf golang.tar.gz && \
     /usr/local/go/bin/go install golang.org/x/tools/gopls@latest && \

@@ -67,7 +67,8 @@ transient/
 elpy/
 package-quickstart.el
 .lsp-session*
-docker
+Dockerfile
+*.dockerfile
 Dockerfile
 .dockerignore
 .git
