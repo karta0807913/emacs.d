@@ -15,18 +15,20 @@
              (string= expression-text "When")))))
 
 (defun yas-snippet-go-mode-ginkgo-check-error-p ()
-  (and (string-match-p "_test.go$" (buffer-name))
-       (yas-snippet-go-mode-within-ginkgo-block-p)))
+  (when-let ((file-name (buffer-file-name))
+             (_ (string-match-p "_test.go$" (buffer-name)))
+             (_ (yas-snippet-go-mode-within-ginkgo-block-p))
+             (workspaces (lsp-workspaces)))
+    (yas-snippet-without-prefix-buffer
+     "?"
+     (with-lsp-workspaces workspaces
+       (setq-local lsp-buffer-uri (lsp--path-to-uri file-name))
+       (treesit-parser-create 'go)
+       (when-let ((func-resp (yas-snippet-go-mode-get-function-response-at (point))))
+         (plist-get func-resp :names))))))
 
-(defun yas-snippet-go-mode-within-ginkgo-block-p ()
-  (when-let* ((_ (treesit-ready-p 'go))
-              (_ (string-match "_test.go" (buffer-name)))
-              (call-expression (treesit-parent-until
-                                (treesit-node-at (point))
-                                (lambda (node)
-                                  (string= (treesit-node-type node)
-                                           "call_expression"))))
-              (first-expression (car (treesit-node-children call-expression "identifier")))
+(defun yas-snippet-go-mode--within-ginkgo-block-p (node)
+  (when-let* ((first-expression (car (treesit-node-children node "identifier")))
               (expression-type (treesit-node-type first-expression))
               (expression-text (treesit-node-text first-expression)))
     (and (string= expression-type "identifier")
@@ -37,6 +39,15 @@
              (string= expression-text "BeforeEach")
              (string= expression-text "AfterEach")
              (string= expression-text "When")))))
+
+(defun yas-snippet-go-mode-within-ginkgo-block-p ()
+  (when-let* ((_ (treesit-ready-p 'go))
+              (_ (string-match "_test.go" (buffer-name))))
+    (when
+        (treesit-parent-until
+         (treesit-node-at (point))
+         'yas-snippet-go-mode--within-ginkgo-block-p)
+      t)))
 
 (defun yas-snippet-go-mode-get-func-doc ()
   (when-let* ((eldoc (lsp-request
@@ -153,21 +164,26 @@ lsp-mode is required for this function."
            (selector (treesit-node-child line-node 1 "selector_expression")))
       (goto-char (- (treesit-node-start selector) 1))
 
-      (let ((source-code (yas-snippet-go-mode-get-func-doc))
-            (answer nil))
+      (when-let ((source-code (yas-snippet-go-mode-get-func-doc)))
         (with-temp-buffer
-          (insert source-code) ;; "func F(...) (...)" or "func (*a.A).F(...) (...)"
+          ;; the source-code should be
+          ;; "func F(...) (...)" or
+          ;; "func (*a.A).F(...) (...)" or
+          ;; "fun F(...)"
+          (insert source-code)
           (goto-char (point-max))
           (when (eq ?\) (char-before)) ;; if it has multiple return values
             (backward-sexp)) ;; "func F(...) |(...)" move to here
-          (goto-char (+ (or (ignore-errors (search-backward ")")) 0) 1)) ;; "func F(...)| error" move to here
+          (goto-char (+ (or (ignore-errors (search-backward ")")) (- (point) 2)) 1)) ;; "func F(...)| error" move to here
           (backward-sexp) ;; "func F|(...) error" move to here
           (delete-region (point-min) (point)) ;; delete all function keyword and function name.
           (insert "func F") ;; append the function prefix back.
           (let* ((root (treesit-parser-root-node (treesit-parser-create 'go)))
-                 (root-children (treesit-node-child root 0))
-                 (func-children (treesit-node-children root-children))
-                 (parameters (yas-snippet-go-mode-get-parent-function-return-values (point))))
+                 (func-node (treesit-node-child root 0))
+                 (parameters
+                  (yas-snippet-go-mode-get-parent-function-return-values
+                   ;; goto the end of "func"
+                   (treesit-node-start (nth 1 (treesit-node-children func-node))))))
             (plist-put
              (plist-put parameters
                         :node-start (treesit-node-start line-node))
@@ -236,11 +252,18 @@ This function returns a plist, which contains
                            (or (string= "function_declaration" (treesit-node-type node))
                                (string= "method_declaration" (treesit-node-type node))
                                (string= "func_literal" (treesit-node-type node))))))
-             (return-values (if-let* ((children (nreverse (treesit-node-children func-node)))
-                                      (_ (string= (treesit-node-type (car children)) "block")))
+             (return-values (let ((children (nreverse (treesit-node-children func-node))))
+                              (cond
+                               ;; if input is "func F(...) (...) {}"
+                               ((string= (treesit-node-type (car children)) "block")
                                 (when (string= (treesit-node-type (nth 2 children)) "parameter_list")
-                                  (nth 1 children))
-                              (car children))))
+                                  (nth 1 children)))
+                               ;; if input is "func F(...) (...)" or
+                               ;; "func F(...)"
+                               ((string= (treesit-node-type (nth 1 children)) "parameter_list")
+                                (car children))
+                               ;; this function doesn't have return values
+                               (t nil)))))
     (cond
      ((string= "parameter_list" (treesit-node-type return-values))
       (let ((parameters (seq-filter
@@ -416,11 +439,3 @@ This function returns a plist, which contains
                    (yas-snippet-go-mode-get-response-name-snippet names 1) line)
            (plist-get func-resp :node-start)
            (plist-get func-resp :node-end))))))
-
-(defun test ()
-  (interactive)
-  (treesit-parent-until
-   (treesit-node-at (point))
-   (lambda (node)
-     (print (treesit-node-type node))
-     nil)))
