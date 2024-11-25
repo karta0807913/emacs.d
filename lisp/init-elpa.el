@@ -410,6 +410,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (require-package 'ob-sagemath)
 (require-package 'pulseaudio-control)
 (require-package 'vterm)
+(require-package 'dockerfile-mode)
 
 (defvar my-color-themes
   '(afternoon-theme

@@ -14,19 +14,28 @@
 
 (setq auto-save-visited-interval 2)
 
+(defun my-auto-save-visited-predicate ()
+  "Predicate to control which buffers are auto-saved."
+  (and (buffer-file-name)
+       (not (file-remote-p (buffer-file-name)))
+       (not (my-file-too-big-p (buffer-file-name)))
+       (file-writable-p (buffer-file-name))
+       (not (memq major-mode my-auto-save-exclude-major-mode-list))))
+
 (defun my-auto-save-visited-mode-setup ()
   "Auto save setup."
   ;; turn off `auto-save-visited-mode' in certain scenarios
-  (message "my-auto-save-visited-mode-setup called")
-  (when (or (not (buffer-file-name))
-            (file-remote-p (buffer-file-name))
-            (my-file-too-big-p (buffer-file-name))
-            (memq major-mode my-auto-save-exclude-major-mode-list))
+  (when (my-auto-save-visited-predicate)
     (setq-local auto-save-visited-mode nil)))
+
+(cond
+ (*emacs29*
+  (setq auto-save-visited-predicate #'my-auto-save-visited-predicate))
+ (t
+  (defvar auto-save-visited-predicate)
+  (add-hook 'auto-save-visited-mode-hook #'my-auto-save-visited-mode-setup)))
+
 (my-run-with-idle-timer 2 #'auto-save-visited-mode)
-(add-hook 'auto-save-visited-mode-hook #'my-auto-save-visited-mode-setup)
-;; (add-hook 'text-mode-hook #'my-auto-save-visited-mode-setup)
-;; (add-hook 'prog-mode-hook #'my-auto-save-visited-mode-setup)
 ;; }}
 
 ;; {{ auto-yasnippet
