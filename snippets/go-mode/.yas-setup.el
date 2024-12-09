@@ -15,17 +15,8 @@
              (string= expression-text "When")))))
 
 (defun yas-snippet-go-mode-ginkgo-check-error-p ()
-  (when-let ((file-name (buffer-file-name))
-             (_ (string-match-p "_test.go$" (buffer-name)))
-             (_ (yas-snippet-go-mode-within-ginkgo-block-p))
-             (workspaces (lsp-workspaces)))
-    (yas-snippet-without-prefix-buffer
-     "?"
-     (with-lsp-workspaces workspaces
-       (setq-local lsp-buffer-uri (lsp--path-to-uri file-name))
-       (treesit-parser-create 'go)
-       (when-let ((func-resp (yas-snippet-go-mode-get-function-response-at (point))))
-         (plist-get func-resp :names))))))
+  (and (string-match-p "_test.go$" (buffer-name))
+       (yas-snippet-go-mode-within-ginkgo-block-p)))
 
 (defun yas-snippet-go-mode--within-ginkgo-block-p (node)
   (when-let* ((first-expression (car (treesit-node-children node "identifier")))
@@ -405,37 +396,43 @@ This function returns a plist, which contains
          (plist-get func-resp :node-end)))))
 
 (defun yas-snippet-go-mode-ginkgo-check-error (pos &optional inlinep)
-  (if-let ((func-resp (yas-snippet-go-mode-get-function-response-at pos)))
-      (if-let ((err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=))
-               (names (plist-get func-resp :names))
-               (line (yas-escape-text (buffer-substring-no-properties
-                                       (plist-get func-resp :node-start)
-                                       (plist-get func-resp :node-end)))))
-          (cond
-           ((length= names 1)
-            (yas-expand-snippet
-             (format "Expect(%s).To(Succeed())"
-                     line)
-             (plist-get func-resp :node-start)
-             (plist-get func-resp :node-end)))
-           (inlinep
-            (yas-expand-snippet
-             (format "Expect(%s).Error().To(Succeed())"
-                     line)
-             (plist-get func-resp :node-start)
-             (plist-get func-resp :node-end)))
-           (t
-            (yas-expand-snippet
-             (format "%s := %s\nExpect($%d).To(Succeed())\n$0"
-                     (yas-snippet-go-mode-get-response-name-snippet names 1)
-                     line
-                     (+ 1 err-idx))
-             (plist-get func-resp :node-start)
-             (plist-get func-resp :node-end))))
-        (if (length= names 1)
-            (yas-expand-snippet (format "Expect(%s).To($0)" line))
+  (when-let ((func-resp (yas-snippet-go-mode-get-function-response-at pos)))
+    (if-let ((names (plist-get func-resp :names))
+             (line (yas-escape-text (buffer-substring-no-properties
+                                     (plist-get func-resp :node-start)
+                                     (plist-get func-resp :node-end))))
+             (err-idx (cl-position "error" (plist-get func-resp :types) :test 'string=)))
+        (cond
+         ((length= names 1)
           (yas-expand-snippet
-           (format "%s := %s\nExpect($1).To($0)"
-                   (yas-snippet-go-mode-get-response-name-snippet names 1) line)
+           (format "Expect(%s).To(Succeed())"
+                   line)
            (plist-get func-resp :node-start)
-           (plist-get func-resp :node-end))))))
+           (plist-get func-resp :node-end)))
+         (inlinep
+          (yas-expand-snippet
+           (format "Expect(%s).Error().To(Succeed())"
+                   line)
+           (plist-get func-resp :node-start)
+           (plist-get func-resp :node-end)))
+         (t
+          (yas-expand-snippet
+           (format "%s := %s\nExpect($%d).To(Succeed())\n$0"
+                   (yas-snippet-go-mode-get-response-name-snippet names 1)
+                   line
+                   (+ 1 err-idx))
+           (plist-get func-resp :node-start)
+           (plist-get func-resp :node-end))))
+      (cond ((length= names 1)
+             (yas-expand-snippet (format "Expect(%s).To($0)" line)
+                                 (plist-get func-resp :node-start)
+                                 (plist-get func-resp :node-end)))
+            ((length= names 0)
+             ;; empty branch
+             )
+            (t
+             (yas-expand-snippet
+              (format "%s := %s\nExpect($1).To($0)"
+                      (yas-snippet-go-mode-get-response-name-snippet names 1) line)
+              (plist-get func-resp :node-start)
+              (plist-get func-resp :node-end)))))))
