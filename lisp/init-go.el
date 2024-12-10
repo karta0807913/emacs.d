@@ -10,7 +10,9 @@
                     (when (string= (treesit-node-type node) "call_expression")
                       (let ((expression (car (treesit-node-children node))))
                         (and (string= (treesit-node-type expression) "identifier")
-                             (string= (treesit-node-text expression) "It")))))
+                             (or
+                              (string= (treesit-node-text expression) "DescribeTable")
+                              (string= (treesit-node-text expression) "It"))))))
                   t))
                 ;; children is (identifier argument_list)
                 (children (treesit-node-children call-expression))

@@ -155,6 +155,7 @@
   (require-init 'init-evil) ; init-evil dependent on init-clipboard
   (require-init 'init-pdf)
   (require-init 'go-struct-tag)
+  (require-init 'ginkgo-treemacs-outline)
 
   ;; ediff configuration should be last so it can override
   ;; the key bindings in previous configuration
