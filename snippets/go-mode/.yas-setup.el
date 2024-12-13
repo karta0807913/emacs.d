@@ -203,13 +203,14 @@ lsp-mode is required for this function."
         (name (treesit-node-text node))
         (type-declaration (yas-snippet-go-mode-get-declaration-doc nil (lsp--point-to-position (treesit-node-end node)))))
     (cond
-     ((string-match-p (regexp-quote " interface {") type-declaration)
+     ((and type-declaration
+           (string-match-p (regexp-quote " interface {") type-declaration))
       "nil")
      ((or (string= type "pointer_type")
           (string= type "slice_type")
           (string= type "channel_type")
           (string= type "function_type")
-          (string= name "error"))
+          (string= name "interface{}"))
       "nil")
      (t
       (cond
@@ -222,7 +223,7 @@ lsp-mode is required for this function."
             (string= "rune" name))
         "'0'")
        (t
-        (format "%s\\{\\}" (treesit-node-text node))))))))
+        (yas-escape-text (format "%s{}" (treesit-node-text node)))))))))
 
 (defun yas-snippet-go-mode-get-response-name-snippet (names count)
   (setq count (- count 1))
@@ -286,7 +287,7 @@ This function returns a plist, which contains
 (defun yas-escape-text (text)
   "Escape TEXT for snippet."
   (when text
-    (replace-regexp-in-string "[`\\$]" "\\\\\\&" text)))
+    (replace-regexp-in-string "[`\\${}]" "\\\\\\&" text)))
 
 (defun yas-snippet-go-mode-check-error-and-return (pos &optional inlinep)
   (goto-char pos)
