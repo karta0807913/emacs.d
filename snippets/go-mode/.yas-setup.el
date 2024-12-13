@@ -40,10 +40,10 @@
          'yas-snippet-go-mode--within-ginkgo-block-p)
       t)))
 
-(defun yas-snippet-go-mode-get-func-doc ()
+(defun yas-snippet-go-mode-get-declaration-doc (&optional identifier position)
   (when-let* ((eldoc (lsp-request
                       "textDocument/hover"
-                      (lsp--text-document-position-params)))
+                      (lsp--text-document-position-params identifier position)))
               (contents (gethash "contents" eldoc)))
     (lsp--render-on-hover-content contents nil)))
 
@@ -155,7 +155,7 @@ lsp-mode is required for this function."
            (selector (treesit-node-child line-node 1 "selector_expression")))
       (goto-char (- (treesit-node-start selector) 1))
 
-      (when-let ((source-code (yas-snippet-go-mode-get-func-doc)))
+      (when-let ((source-code (yas-snippet-go-mode-get-declaration-doc)))
         (with-temp-buffer
           ;; the source-code should be
           ;; "func F(...) (...)" or
@@ -165,7 +165,7 @@ lsp-mode is required for this function."
           (goto-char (point-max))
           (when (eq ?\) (char-before)) ;; if it has multiple return values
             (backward-sexp)) ;; "func F(...) |(...)" move to here
-          (goto-char (+ (or (ignore-errors (search-backward ")")) (- (point) 2)) 1)) ;; "func F(...)| error" move to here
+          (goto-char (+ (or (search-backward ")" nil t) (- (point) 2)) 1)) ;; "func F(...)| error" move to here
           (backward-sexp) ;; "func F|(...) error" move to here
           (delete-region (point-min) (point)) ;; delete all function keyword and function name.
           (insert "func F") ;; append the function prefix back.
@@ -200,8 +200,11 @@ lsp-mode is required for this function."
 
 (defun yas-snippet-go-mode-get-default-value (node)
   (let ((type (treesit-node-type node))
-        (name (treesit-node-text node)))
+        (name (treesit-node-text node))
+        (type-declaration (yas-snippet-go-mode-get-declaration-doc nil (lsp--point-to-position (treesit-node-end node)))))
     (cond
+     ((string-match-p (regexp-quote " interface {") type-declaration)
+      "nil")
      ((or (string= type "pointer_type")
           (string= type "slice_type")
           (string= type "channel_type")
