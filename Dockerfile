@@ -20,7 +20,7 @@ WORKDIR /root/tree-sitter
 RUN make install && cp /usr/local/lib/libtree-sitter.so /usr/local/lib/libtree-sitter.so.* /lib/x86_64-linux-gnu/
 WORKDIR /root
 
-RUN git clone --depth 1 --single-branch --branch=emacs-30.0.92 git://git.sv.gnu.org/emacs.git emacs-30
+RUN git clone --depth 1 --single-branch --branch=emacs-30.0.93 https://github.com/emacs-mirror/emacs.git emacs-30
 
 # get old webkit from ubuntu20.04
 COPY ./docker/load-deps.sh .
@@ -87,7 +87,7 @@ RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from
 # python stuff
 RUN --mount=type=bind,source=/var/lib/apt/lists/,target=/var/lib/apt/lists/,from=emacs,rw \
     apt-get install -y python3-pip && \
-    pip install --break-system-packages --no-cache-dir jedi rope yapf pycodestyle pydocstyle python-lsp-server
+    pip install --break-system-packages --no-cache-dir jedi rope yapf pycodestyle pydocstyle uv black ruff pyright
 
 # rust 1.66.0
 ENV RUSTUP_HOME=/usr/local/rustup \

@@ -1,5 +1,6 @@
 (with-eval-after-load 'go-mode
   (require 'treesit)
+  (local-require 'general)
 
   (defun go-mode--treesit-find-test-ginko-it-function-name-at-point ()
     (when-let* ((p (treesit-ready-p 'go))

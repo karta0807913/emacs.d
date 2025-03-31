@@ -2,8 +2,11 @@
   (require 'treesit)
   (require 'cl-generic)
   (require 's)
-  (unless (treesit-parser-list)
-    (treesit-parser-create 'go))
+  (defun go-struct-tag--start-treesit-parser()
+    (when (and (treesit-available-p)
+             (treesit-language-available-p 'go)
+             (not (treesit-language-at)))
+      (treesit-parser-create 'go)))
 
   (defgroup go-struct-tag nil
     "uses treesit to maintain the golang struct tags")
@@ -56,6 +59,7 @@ Return Value: plist of the new tags.
 
   (defun go-struct-tag-add-gorm-struct-tag ()
     (interactive)
+    (go-struct-tag--start-treesit-parser)
     (go-struct-tag-add-struct-tag :namer '(
                                            :json go-struct-tag-json-namer-function
                                            :url go-struct-tag-snake-case-namer-function
@@ -68,6 +72,7 @@ Return Value: plist of the new tags.
     "add go tag to the end of each struct fields.
 this function will use the custom variable go-struct-tag-namer-functions and go-struct-tag-merger-functions."
     (interactive)
+    (go-struct-tag--start-treesit-parser)
     (when-let* ((root (go-struct-tag--treesit-get-struct-node (point)))
                 (fields-info (go-struct-tag--treesit-get-struct-tag root root namer merger)))
       (go-struct-tag--modify-struct-tag fields-info)))

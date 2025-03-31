@@ -119,7 +119,6 @@
   ;; need statistics of keyfreq asap
   (require-init 'init-keyfreq t)
   (require-init 'init-httpd t)
-  (require-init 'init-go)
   (require-init 'init-latex)
   (require-init 'init-dart)
   (require-init 'init-java)
@@ -154,6 +153,7 @@
   ;; use evil mode (vi key binding)
   (require-init 'init-evil) ; init-evil dependent on init-clipboard
   (require-init 'init-pdf)
+  (require-init 'init-go)
   (require-init 'go-struct-tag)
   (require-init 'ginkgo-treemacs-outline)
 

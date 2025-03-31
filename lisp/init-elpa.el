@@ -158,6 +158,7 @@
     lsp-latex
     lsp-java
     lsp-docker
+    lsp-pyright
     jsonrpc
     dart-mode
     go-mode
@@ -383,6 +384,7 @@ If NO-REFRESH is nil, `package-refresh-contents' is called."
 (require-package 'lsp-latex)
 (require-package 'lsp-dart)
 (require-package 'lsp-java)
+(require-package 'lsp-pyright)
 (require-package 'ligature)
 
 ;; {{ Fixed expiring GNU ELPA keys
